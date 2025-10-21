@@ -1,0 +1,12 @@
+usage: hclos <command> [options] [args]
+
+commands:
+  update        update repository indexes
+  install <pkg> install a package
+  remove <pkg>  remove a package
+  search <pkg>  search for a package
+  list          list installed packages
+  info <pkg>    show package information
+  clean         clear cache
+  version       show version
+  help          show this message
