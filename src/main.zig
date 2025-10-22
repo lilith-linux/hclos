@@ -24,16 +24,9 @@ pub fn main() !void {
         std.process.exit(0);
     }
 
-    if (eql(u8, args[1], "install")) {
-    } else if (eql(u8, args[1], "update")) {
+    if (eql(u8, args[1], "install")) {} else if (eql(u8, args[1], "update")) {
         try update.update_repo();
-    } else if (eql(u8, args[1], "remove")) {
-    } else if (eql(u8, args[1], "search")) {
-    } else if (eql(u8, args[1], "list")) {
-    } else if (eql(u8, args[1], "info")) {
-    } else if (eql(u8, args[1], "clean")) {
-    } else if (eql(u8, args[1], "version")) {
-    }else {
+    } else if (eql(u8, args[1], "remove")) {} else if (eql(u8, args[1], "search")) {} else if (eql(u8, args[1], "list")) {} else if (eql(u8, args[1], "info")) {} else if (eql(u8, args[1], "clean")) {} else if (eql(u8, args[1], "version")) {} else {
         if (!std.mem.eql(u8, args[0], "huis-boot")) {
             try display_help();
         } else {

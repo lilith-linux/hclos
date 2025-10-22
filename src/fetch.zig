@@ -1,7 +1,6 @@
 const std = @import("std");
 const curl = @import("curl");
 
-
 pub fn fetch_file(url: [:0]const u8, file: *std.fs.File) !void {
     const alc = std.heap.page_allocator;
 
@@ -17,7 +16,6 @@ pub fn fetch_file(url: [:0]const u8, file: *std.fs.File) !void {
     try easy.setWritedata(file);
 
     _ = try easy.perform();
-    
 }
 
 fn writeCallback(data: [*c]c_char, size: c_uint, nmemb: c_uint, user_data: *anyopaque) callconv(.c) c_uint {

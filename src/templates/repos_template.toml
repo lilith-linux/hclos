@@ -1,0 +1,7 @@
+[[repo]]
+name = "core"
+url = "https://f.pik6c.tech/lilith/core"
+
+[[repo]]
+name = "extra"
+url = "https://f.pik6c.tech/lilith/extra"
