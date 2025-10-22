@@ -4,7 +4,7 @@ const eql = std.mem.eql;
 const fetch = @import("fetch.zig");
 const parse = @import("parse.zig");
 const update = @import("update.zig");
-const mirrors = @import("mirrors.zig");
+const repos_conf = @import("repos_conf.zig");
 
 const help_message = @embedFile("./templates/help_message");
 const bootstrap_message = @embedFile("./templates/bootstrap_message");
