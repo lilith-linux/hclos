@@ -2,8 +2,7 @@ const std = @import("std");
 const contstants = @import("constants.zig");
 const repos_conf = @import("repos_conf.zig");
 const fetch = @import("fetch.zig");
-const _info = @import("info.zig");
-const info = _info.info;
+const info = @import("info.zig").info;
 
 
 pub fn update_repo() !void {
