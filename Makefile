@@ -5,8 +5,18 @@ PREFIX ?= /usr
 
 
 all:
-	zig build -Doptimize=ReleaseFast
+	if ! [ -e "./src/external-bin" ]; then \
+		mkdir ./src/external-bin -p; \
+	fi
+	cd ./external/minisign/ && zig build -Doptimize=ReleaseSmall --prefix "$$(realpath ../../src/external-bin)"
+	zig build -Doptimize=ReleaseSmall
 
+clean:
+	rm -rf ./external/minisign/zig-out 
+	rm -rf ./external/minisign/.zig-cache
+	rm -rf ./src/external-bin
+	rm -rf ./zig-out
+	rm -rf ./.zig-cache
 
 install:
 	install -Dm755 ./zig-out/bin/hclos "$(PREFIX)/bin/hclos"
