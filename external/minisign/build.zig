@@ -2,14 +2,17 @@ const builtin = @import("builtin");
 const std = @import("std");
 
 pub fn build(b: *std.Build) !void {
-    const target = b.standardTargetOptions(.{});
+    const target = b.resolveTargetQuery(.{
+        .abi = .musl,
+    });
     const optimize = b.standardOptimizeOption(.{});
 
-    const use_libzodium = b.option(bool, "without-libsodium", "Use the zig standard library instead of libsodium") orelse false;
-    const use_static_linking = b.option(bool, "static", "Statically link the binary") orelse false;
+    const use_libzodium = true;
+    const use_static_linking = true;
 
     const minisign = b.addExecutable(.{
         .name = "minisign",
+        .linkage = .static,
         .root_module = b.createModule(.{
             .target = target,
             .optimize = optimize,
