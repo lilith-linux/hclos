@@ -1,10 +1,10 @@
 const std = @import("std");
 const eql = std.mem.eql;
 
-const fetch = @import("fetch.zig");
+const fetch = @import("fetch");
+const repos_conf = @import("repos_conf");
+const update = @import("update");
 const parse = @import("parse.zig");
-const update = @import("update.zig");
-const repos_conf = @import("repos_conf.zig");
 
 const help_message = @embedFile("./templates/help_message");
 const bootstrap_message = @embedFile("./templates/bootstrap_message");

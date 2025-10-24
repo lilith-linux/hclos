@@ -1,6 +1,6 @@
 const std = @import("std");
 const toml = @import("toml");
-const constants = @import("constants.zig");
+const constants = @import("constants");
 
 pub const ReposConf = struct {
     repo: []Repository,

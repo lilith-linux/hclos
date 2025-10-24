@@ -1,9 +1,9 @@
 const std = @import("std");
-const contstants = @import("constants.zig");
-const repos_conf = @import("repos_conf.zig");
-const fetch = @import("fetch.zig");
-const minisign = @import("./minisign.zig");
-const info = @import("info.zig").info;
+const constants = @import("constants");
+const repos_conf = @import("repos_conf");
+const fetch = @import("fetch");
+const minisign = @import("minisign");
+const info = @import("info").info;
 
 pub fn update_repo() !void {
     if (!is_root()) {
@@ -33,7 +33,7 @@ fn fetch_files(alc: std.mem.Allocator, name: []const u8, url: []const u8) !void{
         const url_bin_minisig = try std.fmt.allocPrint(alc, "{s}/index.bin.minisig", .{url});
         const url_minisig_pub = try std.fmt.allocPrint(alc, "{s}/{s}.pub", .{ url, name });
 
-        const savedir = try std.fmt.allocPrint(alc, "{s}/{s}", .{ contstants.hclos_repos, name });
+        const savedir = try std.fmt.allocPrint(alc, "{s}/{s}", .{ constants.hclos_repos, name });
         const save_bin = try std.fmt.allocPrint(alc, "{s}/index.bin", .{savedir});
         const save_bin_minisig = try std.fmt.allocPrint(alc, "{s}/index.bin.minisig", .{savedir});
         const save_minisig_pub = try std.fmt.allocPrint(alc, "{s}/{s}.pub", .{ savedir, name });
@@ -89,7 +89,7 @@ fn fetch_files(alc: std.mem.Allocator, name: []const u8, url: []const u8) !void{
 }
 
 pub fn check_minisign(alc: std.mem.Allocator, name: []const u8) !void {
-    const savedir = try std.fmt.allocPrint(alc, "{s}/{s}", .{ contstants.hclos_repos, name });
+    const savedir = try std.fmt.allocPrint(alc, "{s}/{s}", .{ constants.hclos_repos, name });
     defer alc.free(savedir);
     
     const bin = try std.fmt.allocPrint(alc, "{s}/index.bin", .{savedir});

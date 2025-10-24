@@ -1,6 +1,6 @@
 const minisign = @embedFile("./external-bin/bin/minisign");
 const std = @import("std");
-const constants = @import("constants.zig");
+const constants = @import("constants");
 
 
 pub fn exec_minisign(alc: std.mem.Allocator, info: bool, name: []const u8, args: []const []const u8) !bool{
