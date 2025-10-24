@@ -1,4 +1,5 @@
 const std = @import("std");
+const minisign_build = @import("./external/minisign/build.zig");
 
 pub fn build(b: *std.Build) void {
     const target = b.resolveTargetQuery(.{
@@ -8,7 +9,7 @@ pub fn build(b: *std.Build) void {
     });
     const optimize = b.standardOptimizeOption(.{});
 
-    // for zig-curl(static linking)
+    // for zig-curl(static link)
     const dep_curl = b.dependency("curl", .{
         .target = target,
         .optimize = optimize,
@@ -54,6 +55,28 @@ pub fn build(b: *std.Build) void {
     });
     fetch.addImport("curl", dep_curl.module("curl"));
 
+
+    const package = b.addModule("package", .{
+        .root_source_file = b.path("src/package/package.zig"),
+        .target = target,
+    });
+    
+    const writer = b.addModule("writer", .{
+        .root_source_file = b.path("src/package/writer/writer.zig"),
+        .target = target,
+        .imports = &.{
+            .{ .name = "package", .module = package },
+        }
+    });
+
+    const reader = b.addModule("reader", .{
+        .root_source_file = b.path("src/package/reader/reader.zig"),
+        .target = target,
+        .imports = &.{
+            .{ .name = "package", .module = package },
+        }
+    });
+
     const update = b.addModule("update", .{
         .root_source_file = b.path("src/update/update.zig"),
         .target = target,
@@ -67,6 +90,35 @@ pub fn build(b: *std.Build) void {
         }
     });
 
+    const install = b.addModule("install", .{
+        .root_source_file = b.path("src/install/install.zig"),
+        .target = target,
+        .link_libc = true,
+        .imports = &.{
+            .{ .name = "info", .module = info },
+            .{ .name = "fetch", .module = fetch },
+            .{ .name = "constants", .module = constants },
+            .{ .name = "repos_conf", .module = repos_conf },
+            .{ .name = "minisign", .module = minisign },
+            .{ .name = "package_reader", .module = reader },
+            .{ .name = "package", .module = package },
+        }
+    });
+
+    const search = b.addModule("search", .{
+        .root_source_file = b.path("src/search/search.zig"),
+        .target = target,
+        .link_libc = true,
+        .imports = &.{
+            .{ .name = "info", .module = info },
+            .{ .name = "fetch", .module = fetch },
+            .{ .name = "constants", .module = constants },
+            .{ .name = "repos_conf", .module = repos_conf },
+            .{ .name = "minisign", .module = minisign },
+            .{ .name = "package_reader", .module = reader },
+            .{ .name = "package", .module = package },
+        }
+    });
 
     const exe = b.addExecutable(.{
         .name = "hclos",
@@ -82,6 +134,10 @@ pub fn build(b: *std.Build) void {
                 .{ .name = "info", .module = info },
                 .{ .name = "minisign", .module = minisign },
                 .{ .name = "repos_conf", .module = repos_conf },
+                .{ .name = "reader", .module = reader },
+                .{ .name = "writer", .module = writer },
+                .{ .name = "install", .module = install },
+                .{ .name = "search", .module = search },
             }
         }),
     });

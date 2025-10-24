@@ -2,8 +2,7 @@ const minisign = @embedFile("./external-bin/bin/minisign");
 const std = @import("std");
 const constants = @import("constants");
 
-
-pub fn exec_minisign(alc: std.mem.Allocator, info: bool, name: []const u8, args: []const []const u8) !bool{
+pub fn exec_minisign(alc: std.mem.Allocator, info: bool, name: []const u8, args: []const []const u8) !bool {
     const rand = build_random();
     const minisign_file = try std.fmt.allocPrint(alc, "/tmp/{d}.minisign_file", .{rand});
     defer alc.free(minisign_file);
@@ -14,7 +13,7 @@ pub fn exec_minisign(alc: std.mem.Allocator, info: bool, name: []const u8, args:
     file.close();
     defer del_file(minisign_file);
 
-    const exec = try std.mem.concat(alc, []const u8, &[_][]const []const u8 {
+    const exec = try std.mem.concat(alc, []const u8, &[_][]const []const u8{
         &[_][]const u8{minisign_file},
         args,
     });
@@ -30,7 +29,7 @@ pub fn exec_minisign(alc: std.mem.Allocator, info: bool, name: []const u8, args:
     if (result != .Exited or result.Exited != 0) {
         if (info) {
             std.debug.print("\r\x1b[2KSignature verification failed: {s}\n", .{name});
-        }else {
+        } else {
             std.debug.print("\nSignature verification failed: {s}\n", .{name});
         }
         return false;
@@ -38,7 +37,7 @@ pub fn exec_minisign(alc: std.mem.Allocator, info: bool, name: []const u8, args:
     return true;
 }
 
-fn build_random() u64{
+fn build_random() u64 {
     var seed: [8]u8 = undefined;
     std.posix.getrandom(std.mem.asBytes(&seed)) catch |err| {
         std.debug.print("Failed to get randomSeed: {any}\n", .{err});
@@ -55,5 +54,3 @@ fn del_file(file: []const u8) void {
         std.debug.print("Failed to delete minisign temp file: {any}\n", .{err});
     };
 }
-
-
