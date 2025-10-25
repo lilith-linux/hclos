@@ -1,7 +1,6 @@
 const std = @import("std");
 const Blake3 = std.crypto.hash.Blake3;
 
-
 pub fn gen_hash(allocator: std.mem.Allocator, input_file: []const u8) ![]const u8 {
     const file = try std.fs.openFileAbsolute(input_file, .{});
     defer file.close();
@@ -28,8 +27,4 @@ pub fn gen_hash(allocator: std.mem.Allocator, input_file: []const u8) ![]const u
     const hash_hex = try allocator.dupe(u8, hex_string.items);
 
     return hash_hex;
-} 
-
-
-
-
+}

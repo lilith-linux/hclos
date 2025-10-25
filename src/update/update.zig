@@ -94,7 +94,6 @@ pub fn check_hash(alc: std.mem.Allocator, name: []const u8) !bool {
     const index_hash = try hash.gen_hash(alc, bin);
     defer alc.free(index_hash);
 
-
     if (std.mem.eql(u8, index_hash, trimmed)) {
         return true;
     }
