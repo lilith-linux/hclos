@@ -1,5 +1,4 @@
 const std = @import("std");
-const minisign_build = @import("./external/minisign/build.zig");
 
 pub fn build(b: *std.Build) void {
     const target = b.resolveTargetQuery(.{
@@ -27,13 +26,13 @@ pub fn build(b: *std.Build) void {
         .target = target,
     });
 
-    const info = b.addModule("info", .{
-        .root_source_file = b.path("src/info.zig"),
+    const hash = b.addModule("hash", .{
+        .root_source_file = b.path("src/hash.zig"),
         .target = target,
     });
 
-    const minisign = b.addModule("minisign", .{
-        .root_source_file = b.path("src/minisign.zig"),
+    const info = b.addModule("info", .{
+        .root_source_file = b.path("src/info.zig"),
         .target = target,
     });
 
@@ -86,7 +85,7 @@ pub fn build(b: *std.Build) void {
             .{ .name = "fetch", .module = fetch },
             .{ .name = "constants", .module = constants },
             .{ .name = "repos_conf", .module = repos_conf },
-            .{ .name = "minisign", .module = minisign },
+            .{ .name = "hash", .module = hash },
         }
     });
 
@@ -99,9 +98,9 @@ pub fn build(b: *std.Build) void {
             .{ .name = "fetch", .module = fetch },
             .{ .name = "constants", .module = constants },
             .{ .name = "repos_conf", .module = repos_conf },
-            .{ .name = "minisign", .module = minisign },
             .{ .name = "package_reader", .module = reader },
             .{ .name = "package", .module = package },
+            .{ .name = "hash", .module = hash },
         }
     });
 
@@ -114,7 +113,6 @@ pub fn build(b: *std.Build) void {
             .{ .name = "fetch", .module = fetch },
             .{ .name = "constants", .module = constants },
             .{ .name = "repos_conf", .module = repos_conf },
-            .{ .name = "minisign", .module = minisign },
             .{ .name = "package_reader", .module = reader },
             .{ .name = "package", .module = package },
         }
@@ -132,12 +130,12 @@ pub fn build(b: *std.Build) void {
                 .{ .name = "update", .module = update },
                 .{ .name = "constants", .module = constants },
                 .{ .name = "info", .module = info },
-                .{ .name = "minisign", .module = minisign },
                 .{ .name = "repos_conf", .module = repos_conf },
                 .{ .name = "reader", .module = reader },
                 .{ .name = "writer", .module = writer },
                 .{ .name = "install", .module = install },
                 .{ .name = "search", .module = search },
+                .{ .name = "hash", .module = hash },
             }
         }),
     });
