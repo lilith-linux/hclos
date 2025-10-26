@@ -9,7 +9,7 @@ pub fn read_packages(path: []const u8) !package.Packages {
     const stat = try file.stat();
     const expected_size = @sizeOf(package.Packages);
 
-    std.debug.print("File size: {}, Expected: {}\n", .{ stat.size, expected_size });
+    // std.debug.print("File size: {}, Expected: {}\n", .{ stat.size, expected_size });
 
     if (stat.size < expected_size) {
         return error.PackagesBinFileTooSmall;
