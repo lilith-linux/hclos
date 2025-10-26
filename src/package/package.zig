@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const MAX_PACKAGES = 500;
+const MAX_PACKAGES = 800;
 
 pub const Packages = struct {
     package: [MAX_PACKAGES]Package,
@@ -10,7 +10,7 @@ pub const Package = struct {
     name: [32]u8,
     depend: [64][32]u8,
     description: [124]u8,
-    version: [12]u8,
+    version: [32]u8,
     license: [32]u8,
     isbuild: bool,
 };

@@ -18,7 +18,7 @@ pub fn main() !void {
     }
 
     if (eql(u8, args[1], "install")) {
-        try install.install(args[1..]);
+        try install.install(args[2..]);
     } else if (eql(u8, args[1], "update")) {
         try update.update_repo();
     } else if (eql(u8, args[1], "remove")) {} else if (eql(u8, args[1], "search")) {} else if (eql(u8, args[1], "list")) {} else if (eql(u8, args[1], "info")) {} else if (eql(u8, args[1], "clean")) {} else if (eql(u8, args[1], "version")) {} else {
