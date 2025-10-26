@@ -1,8 +1,8 @@
 const std = @import("std");
 const package = @import("package");
 
-pub fn read_packages(path: []const u8) !package.Packages {
-    var packages: package.Packages = undefined;
+pub fn read_packages(allocator: std.mem.Allocator, path: []const u8) !*package.Packages {
+    const packages = try allocator.create(package.Packages);
 
     var file = try std.fs.openFileAbsolute(path, .{});
     defer file.close();
@@ -15,6 +15,6 @@ pub fn read_packages(path: []const u8) !package.Packages {
         return error.PackagesBinFileTooSmall;
     }
 
-    try file.deprecatedReader().readNoEof(std.mem.asBytes(&packages));
+    try file.deprecatedReader().readNoEof(std.mem.asBytes(&packages.*));
     return packages;
 }

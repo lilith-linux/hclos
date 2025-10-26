@@ -21,8 +21,10 @@ pub fn install(pkgs: [][:0]u8) !void {
         for (parsed_repos.value.repo) |repo| {
             const read_repo = try std.fmt.allocPrint(allocator, "{s}/{s}/index.bin", .{ constants.hclos_repos, repo.name });
             defer allocator.free(read_repo);
-            const readed = try reader.read_packages(read_repo);
-            var db = try package.PackageDB.init(allocator, &readed);
+            const readed = try reader.read_packages(allocator, read_repo);
+            defer allocator.destroy(readed);
+
+            var db = try package.PackageDB.init(allocator, &readed.*);
             defer db.deinit();
 
             if (db.find(pkg)) |found_pkg| {
@@ -40,6 +42,7 @@ pub fn install(pkgs: [][:0]u8) !void {
         std.debug.print("description: {s}\n", .{pkg.description});
         std.debug.print("license: {s}\n", .{pkg.license});
         std.debug.print("version: {s}\n", .{pkg.version});
+        std.debug.print("source code url: {s}\n", .{pkg.src_url});
         var depends = std.ArrayList([]u8){};
         defer {
             for (depends.items) |item| {

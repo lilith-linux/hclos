@@ -13,6 +13,7 @@ pub const Package = struct {
     version: [32]u8,
     license: [32]u8,
     isbuild: bool,
+    src_url: [2083]u8,
 };
 
 pub const PackageDB = struct {
