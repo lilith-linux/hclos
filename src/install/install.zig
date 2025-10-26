@@ -4,6 +4,7 @@ const package = @import("package");
 const reader = @import("package_reader");
 const constants = @import("constants");
 const repo_conf = @import("repos_conf");
+const info = @import("info").info;
 
 pub fn install(pkgs: [][:0]u8) !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -13,8 +14,8 @@ pub fn install(pkgs: [][:0]u8) !void {
         std.process.exit(1);
     };
 
-    var install_packages = try std.ArrayList(package.Package).initCapacity(allocator, 20);
-    defer install_packages.deinit(allocator);
+    var install_packages = std.StringHashMap(repo_conf.Repository).init(allocator);
+    defer install_packages.deinit();
 
     // search packages
     for (pkgs) |pkg| {
@@ -28,7 +29,8 @@ pub fn install(pkgs: [][:0]u8) !void {
             defer db.deinit();
 
             if (db.find(pkg)) |found_pkg| {
-                try install_packages.append(allocator, found_pkg.*);
+                const duped = try allocator.dupe(u8, &found_pkg.name);
+                try install_packages.put(duped, repo);
                 break;
             } else {
                 std.debug.print("Package not found: {s}\n", .{pkg});
@@ -37,35 +39,55 @@ pub fn install(pkgs: [][:0]u8) !void {
         }
     }
 
-    for (install_packages.items) |pkg| {
-        std.debug.print("==== found package {s} ====\n", .{pkg.name});
-        std.debug.print("description: {s}\n", .{pkg.description});
-        std.debug.print("license: {s}\n", .{pkg.license});
-        std.debug.print("version: {s}\n", .{pkg.version});
-        std.debug.print("source code url: {s}\n", .{pkg.src_url});
-        var depends = std.ArrayList([]u8){};
-        defer {
-            for (depends.items) |item| {
-                allocator.free(item);
-            }
-            depends.deinit(allocator);
-        }
+    var iterator = install_packages.iterator();
 
-        for (pkg.depend) |dep| {
-            if (isEmptyString(&dep)) {
-                continue;
-            }
-            const depend = try allocator.dupe(u8, &dep);
-            try depends.append(allocator, depend);
-        }
+    while (iterator.next()) |iter| {
+        const key = iter.key_ptr.*;
+        const name = std.mem.sliceTo(key, 0);
+        const repo = iter.value_ptr.*;
 
-        const deps = try std.mem.join(allocator, ", ", depends.items);
-        defer allocator.free(deps);
+        try info(allocator, "fetch: {s}", .{name});
 
-        std.debug.print("dependencies: {s}\n", .{deps});
+        const fetch_url = try std.fmt.allocPrint(allocator, "{s}/package/{s}", .{ repo.url, name });
+        defer allocator.free(fetch_url);
+        const z = try allocator.dupeZ(u8, fetch_url);
+        defer allocator.free(z);
+
+        try makeDirAbsoluteRecursive(allocator, "/var/cache/hclos/downloads");
+        const cache_file = try std.fmt.allocPrint(allocator, "/var/cache/hclos/downloads/{s}.hcl", .{name});
+        defer allocator.free(cache_file);
+
+        var file = try std.fs.createFileAbsolute(cache_file, .{});
+        try fetch.fetch_file(z, &file);
     }
+    std.debug.print("\n", .{});
 }
 
 fn isEmptyString(buf: []const u8) bool {
     return std.mem.indexOfScalar(u8, buf, 0) == 0;
+}
+
+pub fn makeDirAbsoluteRecursive(allocator: std.mem.Allocator, dir_path: []const u8) !void {
+    var parts = std.mem.splitSequence(u8, dir_path, "/");
+    var current_path = std.ArrayList(u8){};
+    defer current_path.deinit(allocator);
+
+    if (dir_path.len > 0 and dir_path[0] == '/') {
+        try current_path.append(allocator, '/');
+    }
+
+    while (parts.next()) |part| {
+        if (part.len == 0) continue;
+
+        if (current_path.items.len > 1) {
+            try current_path.append(allocator, '/');
+        }
+        try current_path.appendSlice(allocator, part);
+
+        std.fs.makeDirAbsolute(current_path.items) catch |err| {
+            if (err != error.PathAlreadyExists) {
+                return err;
+            }
+        };
+    }
 }
