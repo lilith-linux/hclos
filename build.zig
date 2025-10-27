@@ -46,18 +46,15 @@ pub fn build(b: *std.Build) void {
     } });
     fetch.addImport("curl", dep_curl.module("curl"));
 
-    const package = b.addModule("package", .{
-        .root_source_file = b.path("src/package/package.zig"),
+    const installed = b.addModule("installed", .{
+        .root_source_file = b.path("src/package/installed/mod.zig"),
         .target = target,
     });
 
-    const writer = b.addModule("writer", .{ .root_source_file = b.path("src/package/writer/writer.zig"), .target = target, .imports = &.{
-        .{ .name = "package", .module = package },
-    } });
-
-    const reader = b.addModule("reader", .{ .root_source_file = b.path("src/package/reader/reader.zig"), .target = target, .imports = &.{
-        .{ .name = "package", .module = package },
-    } });
+    const package = b.addModule("package", .{
+        .root_source_file = b.path("src/package/remote/mod.zig"),
+        .target = target,
+    });
 
     const update = b.addModule("update", .{ .root_source_file = b.path("src/update/update.zig"), .target = target, .link_libc = true, .imports = &.{
         .{ .name = "info", .module = info },
@@ -72,7 +69,6 @@ pub fn build(b: *std.Build) void {
         .{ .name = "fetch", .module = fetch },
         .{ .name = "constants", .module = constants },
         .{ .name = "repos_conf", .module = repos_conf },
-        .{ .name = "package_reader", .module = reader },
         .{ .name = "package", .module = package },
         .{ .name = "hash", .module = hash },
     } });
@@ -82,7 +78,6 @@ pub fn build(b: *std.Build) void {
         .{ .name = "fetch", .module = fetch },
         .{ .name = "constants", .module = constants },
         .{ .name = "repos_conf", .module = repos_conf },
-        .{ .name = "package_reader", .module = reader },
         .{ .name = "package", .module = package },
     } });
 
@@ -95,11 +90,11 @@ pub fn build(b: *std.Build) void {
             .{ .name = "constants", .module = constants },
             .{ .name = "info", .module = info },
             .{ .name = "repos_conf", .module = repos_conf },
-            .{ .name = "reader", .module = reader },
-            .{ .name = "writer", .module = writer },
             .{ .name = "install", .module = install },
             .{ .name = "search", .module = search },
             .{ .name = "hash", .module = hash },
+            .{ .name = "installed", .module = installed },
+            .{ .name = "package", .module = package },
         } }),
     });
 

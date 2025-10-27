@@ -7,7 +7,7 @@ const info = @import("info").info;
 
 pub fn update_repo() !void {
     if (!is_root()) {
-        std.debug.print("Only the root user can use this behavior\n", .{});
+        std.debug.print("Error: You must run this command as root\n", .{});
         std.process.exit(1);
     }
     var gpa = std.heap.GeneralPurposeAllocator(.{}).init;

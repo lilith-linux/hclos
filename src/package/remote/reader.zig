@@ -1,5 +1,5 @@
 const std = @import("std");
-const package = @import("package");
+const package = @import("./structs.zig");
 
 pub fn read_packages(allocator: std.mem.Allocator, path: []const u8) !*package.Packages {
     const packages = try allocator.create(package.Packages);

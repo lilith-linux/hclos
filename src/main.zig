@@ -18,7 +18,21 @@ pub fn main() !void {
     }
 
     if (eql(u8, args[1], "install")) {
-        try install.install(args[2..]);
+        if (args.len < 3) {
+            try display_help();
+            std.process.exit(1);
+        }
+
+        if (std.mem.eql(u8, args[2], "--prefix")) {
+            if (args.len < 5) {
+                std.debug.print("usage: --prefix <rootdir> [PACKAGES...]\n", .{});
+                std.process.exit(1);
+            }
+
+            try install.install(args[4..], .{ .prefix = args[3] });
+        } else {
+            try install.install(args[2..], .{});
+        }
     } else if (eql(u8, args[1], "update")) {
         try update.update_repo();
     } else if (eql(u8, args[1], "remove")) {} else if (eql(u8, args[1], "search")) {} else if (eql(u8, args[1], "list")) {} else if (eql(u8, args[1], "info")) {} else if (eql(u8, args[1], "clean")) {} else if (eql(u8, args[1], "version")) {} else {

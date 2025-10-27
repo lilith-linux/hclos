@@ -1,5 +1,5 @@
 const std = @import("std");
-const package = @import("package");
+const package = @import("./structs.zig");
 
 pub fn packages_write(packages: package.Packages, path: []const u8) !void {
     var file = try std.fs.createFileAbsolute(path, .{});
