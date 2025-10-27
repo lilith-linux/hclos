@@ -1,6 +1,6 @@
 const std = @import("std");
 
-pub const hclos_repos_conf = "/etc/hclos/repos.toml";
+pub const hclos_repos_conf = "/etc/hclos/repository.toml";
 pub const hclos_config = "/etc/hclos/config.toml";
 
 pub const hclos_cache = "/var/cache/hclos/downloads";

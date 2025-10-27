@@ -5,7 +5,7 @@ const reader = package.reader;
 const constants = @import("constants");
 const repo_conf = @import("repos_conf");
 const info = @import("info").info;
-const utils = @import("utils.zig");
+const utils = @import("utils");
 const unpack = @import("unpack.zig");
 const dependencies = @import("dependencies.zig");
 const hash = @import("hash");
@@ -36,6 +36,7 @@ pub fn install(pkgs: [][:0]u8, options: installOptions) !void {
     var install_packages = std.StringHashMap(repo_conf.Repository).init(allocator);
     defer {
         var iter = install_packages.iterator();
+        //
         while (iter.next()) |entry| {
             allocator.free(entry.key_ptr.*);
         }

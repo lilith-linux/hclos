@@ -1,7 +1,7 @@
 const std = @import("std");
 const package = @import("package");
 const constants = @import("constants");
-const utils = @import("utils.zig");
+const utils = @import("utils");
 const installed = @import("installed");
 
 pub fn unpack(allocator: std.mem.Allocator, package_file: []const u8, package_info: package.structs.Package, prefix: []const u8) !void {

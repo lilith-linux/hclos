@@ -21,6 +21,11 @@ pub fn build(b: *std.Build) void {
     });
 
     // ========== MODULES ===========
+    const utils = b.addModule("utils", .{
+        .root_source_file = b.path("src/utils.zig"),
+        .target = target,
+    });
+
     const constants = b.addModule("constants", .{
         .root_source_file = b.path("src/constants.zig"),
         .target = target,
@@ -38,6 +43,7 @@ pub fn build(b: *std.Build) void {
 
     const repos_conf = b.addModule("repos_conf", .{ .root_source_file = b.path("src/repos_conf.zig"), .target = target, .imports = &.{
         .{ .name = "constants", .module = constants },
+        .{ .name = "utils", .module = utils },
     } });
     repos_conf.addImport("toml", dep_toml.module("toml"));
 
@@ -62,6 +68,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "constants", .module = constants },
         .{ .name = "repos_conf", .module = repos_conf },
         .{ .name = "hash", .module = hash },
+        .{ .name = "utils", .module = utils },
     } });
 
     const install = b.addModule("install", .{ .root_source_file = b.path("src/install/install.zig"), .target = target, .link_libc = true, .imports = &.{
@@ -71,6 +78,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "repos_conf", .module = repos_conf },
         .{ .name = "package", .module = package },
         .{ .name = "hash", .module = hash },
+        .{ .name = "utils", .module = utils },
     } });
 
     const search = b.addModule("search", .{ .root_source_file = b.path("src/search/search.zig"), .target = target, .link_libc = true, .imports = &.{

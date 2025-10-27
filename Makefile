@@ -17,7 +17,7 @@ clean:
 install:
 	install -Dm755 ./zig-out/bin/hclos "$(PREFIX)/bin/hclos"
 	if [ -d "$(PREFIX)/etc" ]; then \
-		install -Dm755 ./src/templates/repos_template.toml "$(PREFIX)/etc/hclos/repos.toml" \
+		install -Dm755 ./src/templates/repos_template.toml "$(PREFIX)/etc/hclos/repos.toml"; \
 	fi
 
 fmt:

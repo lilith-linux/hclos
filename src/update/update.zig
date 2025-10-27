@@ -4,6 +4,7 @@ const repos_conf = @import("repos_conf");
 const fetch = @import("fetch");
 const hash = @import("hash");
 const info = @import("info").info;
+const utils = @import("utils");
 
 pub fn update_repo() !void {
     if (!is_root()) {
@@ -50,7 +51,7 @@ fn fetch_files(alc: std.mem.Allocator, name: []const u8, url: []const u8) !void 
     defer alc.free(save_bin_hash);
 
     if (!exists(savedir)) {
-        try std.fs.makeDirAbsolute(savedir);
+        try utils.makeDirAbsoluteRecursive(alc, savedir);
     }
 
     var file_bin = std.fs.createFileAbsolute(save_bin, .{}) catch |err| {
