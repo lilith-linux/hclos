@@ -24,3 +24,13 @@ pub fn makeDirAbsoluteRecursive(allocator: std.mem.Allocator, dir_path: []const 
         };
     }
 }
+
+pub fn copyFile(allocator: std.mem.Allocator, src_path: []const u8, dest_path: []const u8) !void {
+    const src_file = try std.fs.openFileAbsolute(src_path, .{ .mode = .read_only });
+    defer src_file.close();
+
+    const dest_file = try std.fs.createFileAbsolute(dest_path, .{});
+    defer dest_file.close();
+
+    try dest_file.writeAll(src_file.deprecatedReader().readAllAlloc(allocator, std.math.maxInt(usize)) catch unreachable);
+}

@@ -62,6 +62,11 @@ pub fn build(b: *std.Build) void {
         .target = target,
     });
 
+    const scripts = b.addModule("scripts", .{
+        .root_source_file = b.path("src/scripts/mod.zig"),
+        .target = target,
+    });
+
     const update = b.addModule("update", .{ .root_source_file = b.path("src/update/update.zig"), .target = target, .link_libc = true, .imports = &.{
         .{ .name = "info", .module = info },
         .{ .name = "fetch", .module = fetch },
@@ -69,6 +74,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "repos_conf", .module = repos_conf },
         .{ .name = "hash", .module = hash },
         .{ .name = "utils", .module = utils },
+        .{ .name = "scripts", .module = scripts },
     } });
 
     const install = b.addModule("install", .{ .root_source_file = b.path("src/install/install.zig"), .target = target, .link_libc = true, .imports = &.{
@@ -79,6 +85,8 @@ pub fn build(b: *std.Build) void {
         .{ .name = "package", .module = package },
         .{ .name = "hash", .module = hash },
         .{ .name = "utils", .module = utils },
+        .{ .name = "installed", .module = installed },
+        .{ .name = "scripts", .module = scripts },
     } });
 
     const search = b.addModule("search", .{ .root_source_file = b.path("src/search/search.zig"), .target = target, .link_libc = true, .imports = &.{
@@ -102,6 +110,7 @@ pub fn build(b: *std.Build) void {
             .{ .name = "search", .module = search },
             .{ .name = "hash", .module = hash },
             .{ .name = "installed", .module = installed },
+            .{ .name = "search", .module = search },
             .{ .name = "package", .module = package },
         } }),
     });

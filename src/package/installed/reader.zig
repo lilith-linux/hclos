@@ -13,7 +13,7 @@ pub fn readPackage(allocator: std.mem.Allocator, file: []const u8) !structs.Pack
 
     var name: []u8 = undefined;
     var version: []u8 = undefined;
-    var pathlist: []u8 = undefined;
+    var pathlist: [][]u8 = undefined;
 
     for (splited) |line| {
         if (line.len == 0) continue;
@@ -27,7 +27,11 @@ pub fn readPackage(allocator: std.mem.Allocator, file: []const u8) !structs.Pack
         } else if (std.mem.eql(u8, key, "version")) {
             version = try allocator.dupe(u8, value);
         } else if (std.mem.eql(u8, key, "pathlist")) {
-            pathlist = try allocator.dupe(u8, value);
+            const splited_pathlist = std.mem.splitAny(u8, value, ":");
+            pathlist = try allocator.alloc([]u8, splited_pathlist.count());
+            for (splited_pathlist) |path| {
+                pathlist[pathlist.len - 1] = try allocator.dupe(u8, path);
+            }
         }
     }
 

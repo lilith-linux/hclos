@@ -23,6 +23,7 @@ pub fn resolveDependencies(
     pkgs: [][:0]u8,
     parsed_repos: *const repo_conf.ReposConf,
     install_packages: *std.StringHashMap(repo_conf.Repository),
+    prefix: []const u8,
 ) !std.StringHashMap(DependencyNode) {
     var dependency_tree = std.StringHashMap(DependencyNode).init(allocator);
     var visited = std.StringHashMap(void).init(allocator);
@@ -38,6 +39,7 @@ pub fn resolveDependencies(
             &visited,
             install_packages,
             0,
+            prefix,
         );
     }
 
@@ -52,6 +54,7 @@ fn resolveDependenciesRecursive(
     visited: *std.StringHashMap(void),
     install_packages: *std.StringHashMap(repo_conf.Repository),
     depth: usize,
+    prefix: []const u8,
 ) !void {
     // 既に訪問済みなら戻る
     if (visited.contains(pkg_name)) {
@@ -65,7 +68,7 @@ fn resolveDependenciesRecursive(
     var found_repo: ?repo_conf.Repository = null;
 
     for (parsed_repos.repo) |repo| {
-        const read_repo = try std.fmt.allocPrint(allocator, "{s}/{s}/index.bin", .{ constants.hclos_repos, repo.name });
+        const read_repo = try std.fmt.allocPrint(allocator, "{s}/{s}/{s}/index.bin", .{ prefix, constants.hclos_repos, repo.name });
         defer allocator.free(read_repo);
 
         const readed = try reader.read_packages(allocator, read_repo);
@@ -112,6 +115,7 @@ fn resolveDependenciesRecursive(
                 visited,
                 install_packages,
                 depth + 1,
+                prefix,
             );
         }
     }

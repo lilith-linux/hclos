@@ -5,25 +5,42 @@ const fetch = @import("fetch");
 const hash = @import("hash");
 const info = @import("info").info;
 const utils = @import("utils");
+const chroot = @import("scripts").chroot;
 
-pub fn update_repo() !void {
+const UpdateOptions = struct {
+    prefix: ?[]const u8 = null,
+};
+
+pub fn update_repo(allocator: std.mem.Allocator, options: UpdateOptions) !void {
     if (!is_root()) {
         std.debug.print("Error: You must run this command as root\n", .{});
         std.process.exit(1);
     }
-    var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
-    const alc = gpa.allocator();
 
+    var prefix = options.prefix;
+
+    if (options.prefix == null) {
+        prefix = try allocator.dupe(u8, "/");
+    } else {
+        prefix = try std.fs.realpathAlloc(allocator, options.prefix.?);
+    }
+    defer allocator.free(prefix.?);
+
+    try real_update(allocator, prefix.?);
+}
+
+pub fn real_update(alc: std.mem.Allocator, prefix: []const u8) !void {
     const repos = try repos_conf.parse_repos(alc);
     defer repos.deinit();
 
     for (repos.value.repo) |repo| {
         try info(alc, "fetch: {s}", .{repo.name});
-        fetch_files(alc, repo.name, repo.url) catch |err| {
+        fetch_files(alc, prefix, repo.name, repo.url) catch |err| {
             std.debug.print("\nFailed to fetch {s}: {any}\n", .{ repo.name, err });
             return;
         };
-        const result = try check_hash(alc, repo.name);
+        try info(alc, "check: {s}", .{repo.name});
+        const result = try check_hash(alc, prefix, repo.name);
         if (!result) {
             std.debug.print("\nHash missmatch: {s}\n", .{repo.name});
         }
@@ -31,53 +48,30 @@ pub fn update_repo() !void {
     std.debug.print("\n", .{});
 }
 
-fn fetch_files(alc: std.mem.Allocator, name: []const u8, url: []const u8) !void {
-    const url_bin = try std.fmt.allocPrint(alc, "{s}/index.bin", .{url});
-    const url_bin_hash = try std.fmt.allocPrint(alc, "{s}/index.bin.hash", .{url});
+fn fetch_files(allocator: std.mem.Allocator, prefix: []const u8, repository_name: []const u8, repository_url: []const u8) !void {
+    const repository_dir = try std.fmt.allocPrint(allocator, "{s}/{s}/{s}", .{ prefix, constants.hclos_repos, repository_name });
+    defer allocator.free(repository_dir);
 
-    const savedir = try std.fmt.allocPrint(alc, "{s}/{s}", .{ constants.hclos_repos, name });
-    const save_bin = try std.fmt.allocPrint(alc, "{s}/index.bin", .{savedir});
-    const save_bin_hash = try std.fmt.allocPrint(alc, "{s}/index.bin.hash", .{savedir});
+    const index_file = try std.fmt.allocPrint(allocator, "{s}/index.bin", .{repository_dir});
+    defer allocator.free(index_file);
 
-    const url_bin_z = try alc.dupeZ(u8, url_bin);
-    const url_bin_hash_z = try alc.dupeZ(u8, url_bin_hash);
+    const index_hash = try std.fmt.allocPrint(allocator, "{s}/index.bin.hash", .{repository_dir});
+    defer allocator.free(index_hash);
 
-    defer alc.free(url_bin_z);
-    defer alc.free(url_bin_hash_z);
+    try utils.makeDirAbsoluteRecursive(allocator, repository_dir);
 
-    defer alc.free(url_bin);
-    defer alc.free(savedir);
-    defer alc.free(save_bin);
-    defer alc.free(save_bin_hash);
+    const url_index = try std.fmt.allocPrint(allocator, "{s}/index.bin", .{repository_url});
+    defer allocator.free(url_index);
 
-    if (!exists(savedir)) {
-        try utils.makeDirAbsoluteRecursive(alc, savedir);
-    }
+    const url_hash = try std.fmt.allocPrint(allocator, "{s}/index.bin.hash", .{repository_url});
+    defer allocator.free(url_hash);
 
-    var file_bin = std.fs.createFileAbsolute(save_bin, .{}) catch |err| {
-        std.debug.print("\nFailed to create {s}: {any}\n", .{ save_bin, err });
-        return;
-    };
-    defer file_bin.close();
-
-    var file_hash = std.fs.createFileAbsolute(save_bin_hash, .{}) catch |err| {
-        std.debug.print("\nFailed to create {s}: {any}\n", .{ save_bin, err });
-        return;
-    };
-    defer file_hash.close();
-
-    fetch.fetch_file(url_bin_z, &file_bin) catch |err| {
-        std.debug.print("\r\x1b[2Kfailed: {s} -- {any}\n", .{ name, err });
-        std.process.exit(1);
-    };
-    fetch.fetch_file(url_bin_hash_z, &file_hash) catch |err| {
-        std.debug.print("\r\x1b[2Kfailed: {s} -- {any}\n", .{ name, err });
-        std.process.exit(1);
-    };
+    try download(allocator, url_index, index_file);
+    try download(allocator, url_hash, index_hash);
 }
 
-pub fn check_hash(alc: std.mem.Allocator, name: []const u8) !bool {
-    const savedir = try std.fmt.allocPrint(alc, "{s}/{s}", .{ constants.hclos_repos, name });
+pub fn check_hash(alc: std.mem.Allocator, prefix: []const u8, name: []const u8) !bool {
+    const savedir = try std.fmt.allocPrint(alc, "{s}/{s}/{s}", .{ prefix, constants.hclos_repos, name });
     defer alc.free(savedir);
 
     const bin = try std.fmt.allocPrint(alc, "{s}/index.bin", .{savedir});
@@ -98,6 +92,16 @@ pub fn check_hash(alc: std.mem.Allocator, name: []const u8) !bool {
         return true;
     }
     return false;
+}
+
+fn download(allocator: std.mem.Allocator, url: []const u8, path: []const u8) !void {
+    var file = try std.fs.cwd().createFile(path, .{});
+    defer file.close();
+
+    const url_z = try allocator.dupeZ(u8, url);
+    defer allocator.free(url_z);
+
+    try fetch.fetch_file(url_z, &file);
 }
 
 fn exists(path: []const u8) bool {
