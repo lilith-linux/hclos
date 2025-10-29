@@ -13,16 +13,31 @@ const hash = @import("hash");
 
 pub const InstallOptions = struct {
     prefix: []const u8 = "/",
+    disable_scripts: bool = false,
 };
 
-pub fn install(allocator: std.mem.Allocator, pkgs: [][:0]u8, options: InstallOptions) !void {
-    const prefix = try std.fs.realpathAlloc(allocator, options.prefix);
+pub fn install(allocator: std.mem.Allocator, pkgs: [][]const u8, options: InstallOptions) !void {
+    const prefix = std.fs.realpathAlloc(allocator, options.prefix) catch |err| {
+        switch (err) {
+            error.FileNotFound => {
+                std.debug.print("Error: Prefix directory not found\n", .{});
+                std.process.exit(1);
+            },
+            else => {
+                std.debug.print("Error: Failed to resolve prefix directory: {any}\n", .{err});
+                std.process.exit(1);
+            },
+        }
+    };
     defer allocator.free(prefix);
 
-    try install_package(allocator, pkgs, prefix);
+    try real_install_package(allocator, pkgs, .{ .prefix = prefix, .disable_scripts = options.disable_scripts });
 }
 
-pub fn install_package(allocator: std.mem.Allocator, pkgs: [][:0]u8, prefix: []const u8) !void {
+fn real_install_package(allocator: std.mem.Allocator, pkgs: [][]const u8, options: InstallOptions) !void {
+    const prefix = options.prefix;
+    const is_prefix = !std.mem.eql(u8, prefix, "/");
+
     if (!is_root()) {
         std.debug.print("Error: You must run this command as root\n", .{});
         std.process.exit(1);
@@ -32,9 +47,11 @@ pub fn install_package(allocator: std.mem.Allocator, pkgs: [][:0]u8, prefix: []c
         std.debug.print("Failed to parse repos.toml: {any}\n", .{err});
         std.process.exit(1);
     };
+    defer parsed_repos.deinit();
 
     // create cache directory
     const prefix_cache = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ prefix, constants.hclos_cache });
+    defer allocator.free(prefix_cache);
     defer deleteTree(prefix_cache);
 
     // prefix cache の作成
@@ -84,6 +101,7 @@ pub fn install_package(allocator: std.mem.Allocator, pkgs: [][:0]u8, prefix: []c
 
         try info(allocator, "fetch: {s}", .{package_name});
 
+        // ------ URL -------
         // hcl(binary) package
         const hcl_url = try std.fmt.allocPrint(allocator, "{s}/packages/{s}.hcl", .{ repo.url, package_name });
         defer allocator.free(hcl_url);
@@ -92,27 +110,36 @@ pub fn install_package(allocator: std.mem.Allocator, pkgs: [][:0]u8, prefix: []c
         const hash_url = try std.fmt.allocPrint(allocator, "{s}/packages/{s}.hcl.hash", .{ repo.url, package_name });
         defer allocator.free(hash_url);
 
-        const z_hcl = try allocator.dupeZ(u8, hcl_url);
-        const z_hash = try allocator.dupeZ(u8, hash_url);
-        defer allocator.free(z_hash);
-        defer allocator.free(z_hcl);
+        // hb(script) package
+        const hb_url = try std.fmt.allocPrint(allocator, "{s}/packages/{s}.hb", .{ repo.url, package_name });
+        defer allocator.free(hb_url);
 
-        // download package location
-        const hcl_file_path = try std.fmt.allocPrint(allocator, "{s}/{s}.hcl", .{ prefix_cache, package_name });
-        defer allocator.free(hcl_file_path);
+        // hash file for <package>.hb
+        const hb_hash_url = try std.fmt.allocPrint(allocator, "{s}/packages/{s}.hb.hash", .{ repo.url, package_name });
+        defer allocator.free(hb_hash_url);
 
-        const hash_file_path = try std.fmt.allocPrint(allocator, "{s}/{s}.hcl.hash", .{ prefix_cache, package_name });
-        defer allocator.free(hash_file_path);
+        // ------- FILE LOCATION -------
+        // <pkg>.hcl
+        const hcl_file = try std.fmt.allocPrint(allocator, "{s}/{s}.hcl", .{ prefix_cache, package_name });
+        defer allocator.free(hcl_file);
 
-        var hcl_file = try std.fs.createFileAbsolute(hcl_file_path, .{});
-        defer hcl_file.close();
+        // .hcl.hash
+        const hash_file = try std.fmt.allocPrint(allocator, "{s}/{s}.hcl.hash", .{ prefix_cache, package_name });
+        defer allocator.free(hash_file);
 
-        var hash_file = try std.fs.createFileAbsolute(hash_file_path, .{});
-        defer hash_file.close();
+        // .hb
+        const hb_file = try std.fmt.allocPrint(allocator, "{s}/{s}.hb", .{ prefix_cache, package_name });
+        defer allocator.free(hb_file);
 
-        try fetch.fetch_file(z_hcl, &hcl_file);
+        // .hb.hash
+        const hb_hash_file = try std.fmt.allocPrint(allocator, "{s}/{s}.hb.hash", .{ prefix_cache, package_name });
+        defer allocator.free(hb_hash_file);
+
+        try utils.download(allocator, hcl_url, hcl_file);
+        try utils.download(allocator, hb_url, hb_file);
         std.debug.print("fetch: {s} - hash", .{package_name});
-        try fetch.fetch_file(z_hash, &hash_file);
+        try utils.download(allocator, hash_url, hash_file);
+        try utils.download(allocator, hb_hash_url, hb_hash_file);
     }
     std.debug.print("\n", .{});
 
@@ -129,7 +156,7 @@ pub fn install_package(allocator: std.mem.Allocator, pkgs: [][:0]u8, prefix: []c
     }
     std.debug.print("\n", .{});
 
-    // === unpack packages ===
+    // === install packages ===
     current = 0;
     var iterator_for_unpack = install_packages.iterator();
 
@@ -139,18 +166,32 @@ pub fn install_package(allocator: std.mem.Allocator, pkgs: [][:0]u8, prefix: []c
         const pkg_name = std.mem.sliceTo(key, 0);
         const repo = iter.value_ptr.*;
 
-        try info(allocator, "unpack: {s} ({d}/{d})", .{ pkg_name, current, total_packages });
+        try info(allocator, "install: {s} ({d}/{d})", .{ pkg_name, current, total_packages });
 
         const pkg_info = try getPackageInfo(allocator, pkg_name, repo, prefix);
 
         const hcl_file_path = try std.fmt.allocPrint(allocator, "{s}/{s}.hcl", .{ prefix_cache, pkg_name });
         defer allocator.free(hcl_file_path);
 
+        const hb_file_path = try std.fmt.allocPrint(allocator, "{s}/{s}.hb", .{ prefix_cache, pkg_name });
+        defer allocator.free(hb_file_path);
+
         // unpack with prefix
         unpack.unpack(allocator, hcl_file_path, pkg_info, prefix) catch |err| {
             std.debug.print("\r\x1b[2KError unpacking {s}: {s}\n", .{ pkg_name, @errorName(err) });
             std.process.exit(1);
         };
+
+        if (!options.disable_scripts) {
+            scripts.install.post_install(allocator, hb_file_path, prefix, is_prefix) catch |err| {
+                if (err == error.ProcessFailed) {
+                    std.debug.print("Error in executing post install script: {s}\n Error: {s}\n", .{ pkg_name, @errorName(err) });
+                    std.process.exit(1);
+                }
+                std.debug.print("Error in executing post install script: {s}, Error: {s}\n", .{ pkg_name, @errorName(err) });
+                std.process.exit(1);
+            };
+        }
     }
     std.debug.print("\n", .{});
 
@@ -164,6 +205,7 @@ fn getPackageInfo(
     prefix: []const u8,
 ) !package.structs.Package {
     const prefix_cache = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ prefix, constants.hclos_repos });
+    defer allocator.free(prefix_cache);
     const read_repo = try std.fmt.allocPrint(allocator, "{s}/{s}/index.bin", .{ prefix_cache, repo.name });
     defer allocator.free(read_repo);
 
@@ -193,17 +235,36 @@ fn integrity_check(allocator: std.mem.Allocator, package_name: []const u8, curre
     const hash_file = try std.fmt.allocPrint(allocator, "{s}/{s}.hcl.hash", .{ prefix_cache, package_name });
     defer allocator.free(hash_file);
 
-    const expected_hash = try std.fs.cwd().readFileAlloc(allocator, hash_file, 1000);
-    defer allocator.free(expected_hash);
-    const trimmed = std.mem.trim(u8, expected_hash, &std.ascii.whitespace);
+    const target_file_hb = try std.fmt.allocPrint(allocator, "{s}/{s}.hb", .{ prefix_cache, package_name });
+    defer allocator.free(target_file_hb);
 
-    const generated = try hash.gen_hash(allocator, target_file);
-    defer allocator.free(generated);
+    const hash_file_hb = try std.fmt.allocPrint(allocator, "{s}/{s}.hb.hash", .{ prefix_cache, package_name });
+    defer allocator.free(hash_file_hb);
 
-    if (!std.mem.eql(u8, trimmed, generated)) {
+    const result_hcl = try hasher(allocator, target_file, hash_file);
+    const result_hb = try hasher(allocator, target_file_hb, hash_file_hb);
+
+    if (!result_hb or !result_hcl) {
         std.debug.print("\nhash mismatch for package '{s}'\n", .{package_name});
         std.process.exit(1);
     }
+}
+
+fn hasher(allocator: std.mem.Allocator, target: []const u8, expected: []const u8) !bool {
+    const expected_hash = try std.fs.cwd().readFileAlloc(allocator, expected, 1000);
+    defer allocator.free(expected_hash);
+    const trimmed = std.mem.trim(u8, expected_hash, &std.ascii.whitespace);
+
+    const generated = try hash.gen_hash(allocator, target);
+    defer allocator.free(generated);
+
+    return std.mem.eql(u8, trimmed, generated);
+}
+
+fn exec_scripts(allocator: std.mem.Allocator, prefix: []const u8, package_name: []const u8) !void {
+    _ = allocator;
+    _ = prefix;
+    _ = package_name;
 }
 
 fn is_root() bool {

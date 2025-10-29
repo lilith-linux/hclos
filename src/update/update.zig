@@ -22,7 +22,18 @@ pub fn update_repo(allocator: std.mem.Allocator, options: UpdateOptions) !void {
     if (options.prefix == null) {
         prefix = try allocator.dupe(u8, "/");
     } else {
-        prefix = try std.fs.realpathAlloc(allocator, options.prefix.?);
+        prefix = std.fs.realpathAlloc(allocator, options.prefix.?) catch |err| {
+            switch (err) {
+                error.FileNotFound => {
+                    std.debug.print("Error: Prefix directory not found\n", .{});
+                    std.process.exit(1);
+                },
+                else => {
+                    std.debug.print("Error: Failed to resolve prefix directory: {any}\n", .{err});
+                    std.process.exit(1);
+                },
+            }
+        };
     }
     defer allocator.free(prefix.?);
 
@@ -66,8 +77,8 @@ fn fetch_files(allocator: std.mem.Allocator, prefix: []const u8, repository_name
     const url_hash = try std.fmt.allocPrint(allocator, "{s}/index.bin.hash", .{repository_url});
     defer allocator.free(url_hash);
 
-    try download(allocator, url_index, index_file);
-    try download(allocator, url_hash, index_hash);
+    try utils.download(allocator, url_index, index_file);
+    try utils.download(allocator, url_hash, index_hash);
 }
 
 pub fn check_hash(alc: std.mem.Allocator, prefix: []const u8, name: []const u8) !bool {
@@ -92,16 +103,6 @@ pub fn check_hash(alc: std.mem.Allocator, prefix: []const u8, name: []const u8) 
         return true;
     }
     return false;
-}
-
-fn download(allocator: std.mem.Allocator, url: []const u8, path: []const u8) !void {
-    var file = try std.fs.cwd().createFile(path, .{});
-    defer file.close();
-
-    const url_z = try allocator.dupeZ(u8, url);
-    defer allocator.free(url_z);
-
-    try fetch.fetch_file(url_z, &file);
 }
 
 fn exists(path: []const u8) bool {

@@ -39,6 +39,7 @@ pub fn unpack(
     try child.spawn();
 
     var stdout_content: []u8 = undefined;
+    defer allocator.free(stdout_content);
 
     if (child.stdout) |stdout| {
         const reader = stdout.deprecatedReader();

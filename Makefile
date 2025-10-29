@@ -5,7 +5,7 @@ PREFIX ?= /usr
 
 
 all:
-	zig build -Doptimize=ReleaseSmall
+	zig build -Doptimize=ReleaseFast
 
 clean:
 	rm -rf ./external/minisign/zig-out 

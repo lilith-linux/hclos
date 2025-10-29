@@ -21,15 +21,20 @@ pub fn build(b: *std.Build) void {
     });
 
     // ========== MODULES ===========
-    const utils = b.addModule("utils", .{
-        .root_source_file = b.path("src/utils.zig"),
-        .target = target,
-    });
 
     const constants = b.addModule("constants", .{
         .root_source_file = b.path("src/constants.zig"),
         .target = target,
     });
+
+    const fetch = b.addModule("fetch", .{ .root_source_file = b.path("src/net/fetch.zig"), .target = target, .imports = &.{
+        .{ .name = "constants", .module = constants },
+    } });
+    fetch.addImport("curl", dep_curl.module("curl"));
+
+    const utils = b.addModule("utils", .{ .root_source_file = b.path("src/utils.zig"), .target = target, .imports = &.{
+        .{ .name = "fetch", .module = fetch },
+    } });
 
     const hash = b.addModule("hash", .{
         .root_source_file = b.path("src/hash.zig"),
@@ -47,11 +52,6 @@ pub fn build(b: *std.Build) void {
     } });
     repos_conf.addImport("toml", dep_toml.module("toml"));
 
-    const fetch = b.addModule("fetch", .{ .root_source_file = b.path("src/net/fetch.zig"), .target = target, .imports = &.{
-        .{ .name = "constants", .module = constants },
-    } });
-    fetch.addImport("curl", dep_curl.module("curl"));
-
     const installed = b.addModule("installed", .{
         .root_source_file = b.path("src/package/installed/mod.zig"),
         .target = target,
@@ -62,10 +62,10 @@ pub fn build(b: *std.Build) void {
         .target = target,
     });
 
-    const scripts = b.addModule("scripts", .{
-        .root_source_file = b.path("src/scripts/mod.zig"),
-        .target = target,
-    });
+    const scripts = b.addModule("scripts", .{ .root_source_file = b.path("src/scripts/mod.zig"), .target = target, .imports = &.{
+        .{ .name = "constants", .module = constants },
+        .{ .name = "utils", .module = utils },
+    } });
 
     const update = b.addModule("update", .{ .root_source_file = b.path("src/update/update.zig"), .target = target, .link_libc = true, .imports = &.{
         .{ .name = "info", .module = info },

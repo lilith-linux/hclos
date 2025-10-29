@@ -20,14 +20,20 @@ pub const DependencyNode = struct {
 
 pub fn resolveDependencies(
     allocator: std.mem.Allocator,
-    pkgs: [][:0]u8,
+    pkgs: [][]const u8,
     parsed_repos: *const repo_conf.ReposConf,
     install_packages: *std.StringHashMap(repo_conf.Repository),
     prefix: []const u8,
 ) !std.StringHashMap(DependencyNode) {
     var dependency_tree = std.StringHashMap(DependencyNode).init(allocator);
     var visited = std.StringHashMap(void).init(allocator);
-    defer visited.deinit();
+    defer {
+        var iter = visited.iterator();
+        while (iter.next()) |entry| {
+            allocator.free(entry.key_ptr.*);
+        }
+        visited.deinit();
+    }
 
     // 各パッケージの依存関係を再帰的に解決
     for (pkgs) |pkg| {
@@ -132,7 +138,7 @@ fn resolveDependenciesRecursive(
 
 pub fn printDependencyTree(
     allocator: std.mem.Allocator,
-    pkgs: [][:0]u8,
+    pkgs: [][]const u8,
     dependency_tree: *const std.StringHashMap(DependencyNode),
 ) !void {
     for (pkgs) |pkg| {

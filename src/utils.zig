@@ -1,4 +1,5 @@
 const std = @import("std");
+const fetch = @import("fetch");
 
 pub fn makeDirAbsoluteRecursive(allocator: std.mem.Allocator, dir_path: []const u8) !void {
     var parts = std.mem.splitSequence(u8, dir_path, "/");
@@ -25,6 +26,14 @@ pub fn makeDirAbsoluteRecursive(allocator: std.mem.Allocator, dir_path: []const 
     }
 }
 
+pub fn deleteFile(path: []const u8) void {
+    std.fs.cwd().deleteFile(path) catch |err| {
+        if (err != error.FileNotFound) {
+            std.log.err("Failed to delete file: {any}", .{err});
+        }
+    };
+}
+
 pub fn copyFile(allocator: std.mem.Allocator, src_path: []const u8, dest_path: []const u8) !void {
     const src_file = try std.fs.openFileAbsolute(src_path, .{ .mode = .read_only });
     defer src_file.close();
@@ -33,4 +42,14 @@ pub fn copyFile(allocator: std.mem.Allocator, src_path: []const u8, dest_path: [
     defer dest_file.close();
 
     try dest_file.writeAll(src_file.deprecatedReader().readAllAlloc(allocator, std.math.maxInt(usize)) catch unreachable);
+}
+
+pub fn download(allocator: std.mem.Allocator, url: []const u8, path: []const u8) !void {
+    var file = try std.fs.cwd().createFile(path, .{});
+    defer file.close();
+
+    const url_z = try allocator.dupeZ(u8, url);
+    defer allocator.free(url_z);
+
+    try fetch.fetch_file(url_z, &file);
 }

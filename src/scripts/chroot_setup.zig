@@ -42,8 +42,8 @@ pub const ChrootEnv = struct {
         // 仮想ファイルシステムをマウント
         try self.mountProc();
         try self.mountSys();
-        // try self.mountDev();
-        // try self.mountDevPts();
+        try self.mountDev();
+        try self.mountDevPts();
         try self.mountTmp();
     }
 
@@ -63,6 +63,8 @@ pub const ChrootEnv = struct {
         const dirs = [_][]const u8{
             "/proc",
             "/sys",
+            "/dev",
+            "/dev/pts",
             "/tmp",
             "/run",
         };
@@ -98,22 +100,22 @@ pub const ChrootEnv = struct {
     }
 
     /// /dev をマウント (bind mount)
-    // fn mountDev(self: *ChrootEnv) !void {
-    //     const target = try std.fmt.allocPrint(self.allocator, "{s}/dev", .{self.root});
-    //     errdefer self.allocator.free(target);
+    fn mountDev(self: *ChrootEnv) !void {
+        const target = try std.fmt.allocPrint(self.allocator, "{s}/dev", .{self.root});
+        errdefer self.allocator.free(target);
 
-    //     try self.mount("/dev", target, null, linux.MS.BIND | linux.MS.REC, null);
-    //     try self.mounted.append(self.allocator, target);
-    // }
+        try self.mount("/dev", target, "devtmpfs", linux.MS.NOSUID | linux.MS.NOEXEC | linux.MS.REC, null);
+        try self.mounted.append(self.allocator, target);
+    }
 
     /// /dev/pts をマウント
-    // fn mountDevPts(self: *ChrootEnv) !void {
-    //     const target = try std.fmt.allocPrint(self.allocator, "{s}/dev/pts", .{self.root});
-    //     errdefer self.allocator.free(target);
+    fn mountDevPts(self: *ChrootEnv) !void {
+        const target = try std.fmt.allocPrint(self.allocator, "{s}/dev/pts", .{self.root});
+        errdefer self.allocator.free(target);
 
-    //     try self.mount("devpts", target, "devpts", linux.MS.NOSUID | linux.MS.NOEXEC, "mode=0620,ptmxmode=0666");
-    //     try self.mounted.append(self.allocator, target);
-    // }
+        try self.mount("devpts", target, "devpts", linux.MS.NOSUID | linux.MS.NOEXEC, "mode=0620,ptmxmode=0666");
+        try self.mounted.append(self.allocator, target);
+    }
 
     /// /tmp をマウント (tmpfs)
     fn mountTmp(self: *ChrootEnv) !void {
