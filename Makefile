@@ -15,7 +15,7 @@ clean:
 	rm -rf ./.zig-cache
 
 install:
-	install -Dm755 ./zig-out/bin/hclos "$(PREFIX)/bin/hclos"
+	install -Dm755 ./zig-out/bin/hclos "$(PREFIX)/usr/bin/hclos"
 	if [ -d "$(PREFIX)/etc" ]; then \
 		install -Dm755 ./src/templates/repos_template.toml "$(PREFIX)/etc/hclos/repos.toml"; \
 	fi
