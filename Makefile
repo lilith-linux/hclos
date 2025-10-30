@@ -16,9 +16,6 @@ clean:
 
 install:
 	install -Dm755 ./zig-out/bin/hclos "$(PREFIX)/usr/bin/hclos"
-	if [ -d "$(PREFIX)/etc" ]; then \
-		install -Dm755 ./src/templates/repos_template.toml "$(PREFIX)/etc/hclos/repos.toml"; \
-	fi
 
 fmt:
 	find src -type f -name '*.zig' -exec zig fmt {} +
