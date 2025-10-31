@@ -1,5 +1,5 @@
 ZIG = zig
-PREFIX ?= /usr
+PREFIX ?= /
 
 .PHONY: all install fmt
 
