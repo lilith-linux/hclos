@@ -63,40 +63,40 @@ fn fetch_files(allocator: std.mem.Allocator, prefix: []const u8, repository_name
     const repository_dir = try std.fmt.allocPrint(allocator, "{s}/{s}/{s}", .{ prefix, constants.hclos_repos, repository_name });
     defer allocator.free(repository_dir);
 
-    const index_file = try std.fmt.allocPrint(allocator, "{s}/index.bin", .{repository_dir});
+    const index_file = try std.fmt.allocPrint(allocator, "{s}/index", .{repository_dir});
     defer allocator.free(index_file);
 
-    const index_hash = try std.fmt.allocPrint(allocator, "{s}/index.bin.hash", .{repository_dir});
-    defer allocator.free(index_hash);
+    const index_b3 = try std.fmt.allocPrint(allocator, "{s}/index.b3", .{repository_dir});
+    defer allocator.free(index_b3);
 
     try utils.makeDirAbsoluteRecursive(allocator, repository_dir);
 
-    const url_index = try std.fmt.allocPrint(allocator, "{s}/index.bin", .{repository_url});
+    const url_index = try std.fmt.allocPrint(allocator, "{s}/index", .{repository_url});
     defer allocator.free(url_index);
 
-    const url_hash = try std.fmt.allocPrint(allocator, "{s}/index.bin.hash", .{repository_url});
-    defer allocator.free(url_hash);
+    const url_b3 = try std.fmt.allocPrint(allocator, "{s}/index.b3", .{repository_url});
+    defer allocator.free(url_b3);
 
     try utils.download(allocator, url_index, index_file);
-    try utils.download(allocator, url_hash, index_hash);
+    try utils.download(allocator, url_b3, index_b3);
 }
 
 pub fn check_hash(alc: std.mem.Allocator, prefix: []const u8, name: []const u8) !bool {
     const savedir = try std.fmt.allocPrint(alc, "{s}/{s}/{s}", .{ prefix, constants.hclos_repos, name });
     defer alc.free(savedir);
 
-    const bin = try std.fmt.allocPrint(alc, "{s}/index.bin", .{savedir});
-    defer alc.free(bin);
+    const index = try std.fmt.allocPrint(alc, "{s}/index", .{savedir});
+    defer alc.free(index);
 
-    const bin_hash = try std.fmt.allocPrint(alc, "{s}/index.bin.hash", .{savedir});
-    defer alc.free(bin_hash);
+    const bin_b3 = try std.fmt.allocPrint(alc, "{s}/index.b3", .{savedir});
+    defer alc.free(bin_b3);
 
-    const bin_expected_file = try std.fs.openFileAbsolute(bin_hash, .{});
+    const bin_expected_file = try std.fs.openFileAbsolute(bin_b3, .{});
     const expected_hash = try bin_expected_file.readToEndAlloc(alc, 1024);
     defer alc.free(expected_hash);
     const trimmed = std.mem.trim(u8, expected_hash, &std.ascii.whitespace);
 
-    const index_hash = try hash.gen_hash(alc, bin);
+    const index_hash = try hash.gen_hash(alc, index);
     defer alc.free(index_hash);
 
     if (std.mem.eql(u8, index_hash, trimmed)) {

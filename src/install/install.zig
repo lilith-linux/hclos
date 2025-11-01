@@ -103,43 +103,43 @@ fn real_install_package(allocator: std.mem.Allocator, pkgs: [][]const u8, option
 
         // ------ URL -------
         // hcl(binary) package
-        const hcl_url = try std.fmt.allocPrint(allocator, "{s}/packages/{s}.hcl", .{ repo.url, package_name });
-        defer allocator.free(hcl_url);
+        const clos_url = try std.fmt.allocPrint(allocator, "{s}/packages/{s}.clos", .{ repo.url, package_name });
+        defer allocator.free(clos_url);
 
-        // hash file for <package>.hcl
-        const hash_url = try std.fmt.allocPrint(allocator, "{s}/packages/{s}.hcl.hash", .{ repo.url, package_name });
-        defer allocator.free(hash_url);
+        // hash file for <package>.clos
+        const b3_url = try std.fmt.allocPrint(allocator, "{s}/packages/{s}.clos.b3", .{ repo.url, package_name });
+        defer allocator.free(b3_url);
 
         // hb(script) package
         const hb_url = try std.fmt.allocPrint(allocator, "{s}/packages/{s}.hb", .{ repo.url, package_name });
         defer allocator.free(hb_url);
 
         // hash file for <package>.hb
-        const hb_hash_url = try std.fmt.allocPrint(allocator, "{s}/packages/{s}.hb.hash", .{ repo.url, package_name });
-        defer allocator.free(hb_hash_url);
+        const hb_b3_url = try std.fmt.allocPrint(allocator, "{s}/packages/{s}.hb.b3", .{ repo.url, package_name });
+        defer allocator.free(hb_b3_url);
 
         // ------- FILE LOCATION -------
-        // <pkg>.hcl
-        const hcl_file = try std.fmt.allocPrint(allocator, "{s}/{s}.hcl", .{ prefix_cache, package_name });
+        // <pkg>clos
+        const hcl_file = try std.fmt.allocPrint(allocator, "{s}/{s}.clos", .{ prefix_cache, package_name });
         defer allocator.free(hcl_file);
 
-        // .hcl.hash
-        const hash_file = try std.fmt.allocPrint(allocator, "{s}/{s}.hcl.hash", .{ prefix_cache, package_name });
+        // .clos.b3
+        const hash_file = try std.fmt.allocPrint(allocator, "{s}/{s}.clos.b3", .{ prefix_cache, package_name });
         defer allocator.free(hash_file);
 
         // .hb
         const hb_file = try std.fmt.allocPrint(allocator, "{s}/{s}.hb", .{ prefix_cache, package_name });
         defer allocator.free(hb_file);
 
-        // .hb.hash
-        const hb_hash_file = try std.fmt.allocPrint(allocator, "{s}/{s}.hb.hash", .{ prefix_cache, package_name });
+        // .hb.b3
+        const hb_hash_file = try std.fmt.allocPrint(allocator, "{s}/{s}.hb.b3", .{ prefix_cache, package_name });
         defer allocator.free(hb_hash_file);
 
-        try utils.download(allocator, hcl_url, hcl_file);
+        try utils.download(allocator, clos_url, hcl_file);
         try utils.download(allocator, hb_url, hb_file);
         std.debug.print("fetch: {s} - hash", .{package_name});
-        try utils.download(allocator, hash_url, hash_file);
-        try utils.download(allocator, hb_hash_url, hb_hash_file);
+        try utils.download(allocator, b3_url, hash_file);
+        try utils.download(allocator, hb_b3_url, hb_hash_file);
     }
     std.debug.print("\n", .{});
 
@@ -170,17 +170,18 @@ fn real_install_package(allocator: std.mem.Allocator, pkgs: [][]const u8, option
 
         const pkg_info = try getPackageInfo(allocator, pkg_name, repo, prefix);
 
-        const hcl_file_path = try std.fmt.allocPrint(allocator, "{s}/{s}.hcl", .{ prefix_cache, pkg_name });
-        defer allocator.free(hcl_file_path);
+        const clos_file_path = try std.fmt.allocPrint(allocator, "{s}/{s}.clos", .{ prefix_cache, pkg_name });
+        defer allocator.free(clos_file_path);
 
         const hb_file_path = try std.fmt.allocPrint(allocator, "{s}/{s}.hb", .{ prefix_cache, pkg_name });
         defer allocator.free(hb_file_path);
 
         // unpack with prefix
-        unpack.unpack(allocator, hcl_file_path, pkg_info, prefix) catch |err| {
-            std.debug.print("\r\x1b[2KError unpacking {s}: {s}\n", .{ pkg_name, @errorName(err) });
-            std.process.exit(1);
-        };
+        try unpack.unpack(allocator, clos_file_path, pkg_info, prefix);
+        // unpack.unpack(allocator, clos_file_path, pkg_info, prefix) catch |err| {
+        //     std.debug.print("\r\x1b[2KError unpacking {s}: {s}\n", .{ pkg_name, @errorName(err) });
+        //     std.process.exit(1);
+        // };
 
         if (!options.disable_scripts) {
             scripts.install.post_install(allocator, hb_file_path, prefix, is_prefix) catch |err| {
@@ -206,7 +207,7 @@ fn getPackageInfo(
 ) !package.structs.Package {
     const prefix_cache = try std.fmt.allocPrint(allocator, "{s}/{s}", .{ prefix, constants.hclos_repos });
     defer allocator.free(prefix_cache);
-    const read_repo = try std.fmt.allocPrint(allocator, "{s}/{s}/index.bin", .{ prefix_cache, repo.name });
+    const read_repo = try std.fmt.allocPrint(allocator, "{s}/{s}/index", .{ prefix_cache, repo.name });
     defer allocator.free(read_repo);
 
     const readed = try reader.read_packages(allocator, read_repo);
@@ -229,20 +230,20 @@ fn integrity_check(allocator: std.mem.Allocator, package_name: []const u8, curre
 
     try info(allocator, "check: {s} ({d}/{d})", .{ package_name, current_index, total_packages });
 
-    const target_file = try std.fmt.allocPrint(allocator, "{s}/{s}.hcl", .{ prefix_cache, package_name });
+    const target_file = try std.fmt.allocPrint(allocator, "{s}/{s}.clos", .{ prefix_cache, package_name });
     defer allocator.free(target_file);
 
-    const hash_file = try std.fmt.allocPrint(allocator, "{s}/{s}.hcl.hash", .{ prefix_cache, package_name });
-    defer allocator.free(hash_file);
+    const b3_file = try std.fmt.allocPrint(allocator, "{s}/{s}.clos.b3", .{ prefix_cache, package_name });
+    defer allocator.free(b3_file);
 
     const target_file_hb = try std.fmt.allocPrint(allocator, "{s}/{s}.hb", .{ prefix_cache, package_name });
     defer allocator.free(target_file_hb);
 
-    const hash_file_hb = try std.fmt.allocPrint(allocator, "{s}/{s}.hb.hash", .{ prefix_cache, package_name });
-    defer allocator.free(hash_file_hb);
+    const b3_file_hb = try std.fmt.allocPrint(allocator, "{s}/{s}.hb.b3", .{ prefix_cache, package_name });
+    defer allocator.free(b3_file_hb);
 
-    const result_hcl = try hasher(allocator, target_file, hash_file);
-    const result_hb = try hasher(allocator, target_file_hb, hash_file_hb);
+    const result_hcl = try hasher(allocator, target_file, b3_file);
+    const result_hb = try hasher(allocator, target_file_hb, b3_file_hb);
 
     if (!result_hb or !result_hcl) {
         std.debug.print("\nhash mismatch for package '{s}'\n", .{package_name});

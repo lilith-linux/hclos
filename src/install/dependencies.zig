@@ -74,10 +74,12 @@ fn resolveDependenciesRecursive(
     var found_repo: ?repo_conf.Repository = null;
 
     for (parsed_repos.repo) |repo| {
-        const read_repo = try std.fmt.allocPrint(allocator, "{s}/{s}/{s}/index.bin", .{ prefix, constants.hclos_repos, repo.name });
+        const read_repo = try std.fmt.allocPrint(allocator, "{s}/{s}/{s}/index", .{ prefix, constants.hclos_repos, repo.name });
         defer allocator.free(read_repo);
 
-        const readed = try reader.read_packages(allocator, read_repo);
+        const readed = reader.read_packages(allocator, read_repo) catch {
+            std.posix.exit(1);
+        };
         defer allocator.destroy(readed);
 
         var db = try package.structs.PackageDB.init(allocator, &readed.*);

@@ -3,6 +3,7 @@ const package = @import("./structs.zig");
 
 pub fn read_packages(allocator: std.mem.Allocator, path: []const u8) !*package.Packages {
     const packages = try allocator.create(package.Packages);
+    errdefer allocator.destroy(&packages.*);
 
     var file = std.fs.openFileAbsolute(path, .{}) catch |err| {
         if (err == error.FileNotFound) {

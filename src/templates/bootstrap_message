@@ -1,6 +1,0 @@
-usage: huis-boot <prefix> <command> [options] [args]
-
-commands:
-  install <pkg> install a package to prefix
-  remove <pkg>  remove a package from prefix
-  list          list installed packages in prefix

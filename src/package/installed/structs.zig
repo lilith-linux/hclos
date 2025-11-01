@@ -3,6 +3,7 @@ const std = @import("std");
 pub const InstalledPackage = struct {
     name: []const u8,
     version: []const u8,
+    depends: [][]const u8,
     pathlist: [][]const u8,
 };
 
