@@ -227,6 +227,25 @@ pub const PackageDB = struct {
         return results;
     }
 
+    pub fn listPackages(self: *const PackageDB, allocator: std.mem.Allocator) !std.ArrayList(*const Package) {
+        var result = std.ArrayList(*const Package){};
+
+        for (&self.list.package) |*pkg| {
+            const end = std.mem.indexOfScalar(u8, &pkg.name, 0) orelse pkg.name.len;
+            if (end == 0) continue;
+
+            try result.append(allocator, pkg);
+        }
+
+        return result;
+    }
+
+    pub fn listSorted(self: *const PackageDB, allocator: std.mem.Allocator) !std.ArrayList(*const Package) {
+        const result = try self.listPackages(allocator);
+        std.mem.sort(*const Package, result.items, {}, comparePackageName);
+        return result;
+    }
+
     fn indexTrigrams(
         allocator: std.mem.Allocator,
         name: []const u8,
@@ -280,5 +299,10 @@ pub const PackageDB = struct {
 
     fn compareRelevance(_: void, a: SearchResult, b: SearchResult) bool {
         return a.relevance > b.relevance;
+    }
+    fn comparePackageName(_: void, a: *const Package, b: *const Package) bool {
+        const a_end = std.mem.indexOfScalar(u8, &a.name, 0) orelse a.name.len;
+        const b_end = std.mem.indexOfScalar(u8, &b.name, 0) orelse b.name.len;
+        return std.mem.lessThan(u8, a.name[0..a_end], b.name[0..b_end]);
     }
 };

@@ -18,10 +18,8 @@ pub fn read_packages(allocator: std.mem.Allocator, path: []const u8) !*package.P
     const stat = try file.stat();
     const expected_size = @sizeOf(package.Packages);
 
-    // std.debug.print("File size: {}, Expected: {}\n", .{ stat.size, expected_size });
-
     if (stat.size < expected_size) {
-        return error.PackagesBinFileTooSmall;
+        return error.PackagesListTooSmall;
     }
 
     try file.deprecatedReader().readNoEof(std.mem.asBytes(&packages.*));

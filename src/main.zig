@@ -3,6 +3,7 @@ const builtin = @import("builtin");
 const update = @import("update");
 const install = @import("install");
 const search = @import("search");
+const list = @import("list");
 const help_message = @embedFile("./templates/help_message");
 
 const Command = enum {
@@ -266,7 +267,6 @@ fn executeCommand(allocator: std.mem.Allocator, parsed: ParsedCommand) !void {
                 std.process.exit(1);
             }
             const opts = parsed.options.install;
-            // install関数には従来のCommandOptions形式で渡す
             try install.install(allocator, parsed.positional_args, .{
                 .prefix = opts.prefix,
                 .disable_scripts = opts.disable_scripts,
@@ -290,7 +290,7 @@ fn executeCommand(allocator: std.mem.Allocator, parsed: ParsedCommand) !void {
             std.debug.print("remove command not yet implemented (purge: {}, prefix: {?s})\n", .{ opts.purge, opts.prefix });
         },
         .list => {
-            std.debug.print("list command not yet implemented\n", .{});
+            try list.list_packages(allocator);
         },
         .info => {
             std.debug.print("info command not yet implemented\n", .{});

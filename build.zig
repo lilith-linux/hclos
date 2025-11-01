@@ -97,6 +97,12 @@ pub fn build(b: *std.Build) void {
         .{ .name = "package", .module = package },
     } });
 
+    const list = b.addModule("list", .{ .root_source_file = b.path("src/list/list.zig"), .target = target, .link_libc = true, .imports = &.{
+        .{ .name = "constants", .module = constants },
+        .{ .name = "repos_conf", .module = repos_conf },
+        .{ .name = "package", .module = package },
+    } });
+
     const exe = b.addExecutable(.{
         .name = "hclos",
         .linkage = .static,
@@ -111,6 +117,7 @@ pub fn build(b: *std.Build) void {
             .{ .name = "hash", .module = hash },
             .{ .name = "installed", .module = installed },
             .{ .name = "search", .module = search },
+            .{ .name = "list", .module = list },
             .{ .name = "package", .module = package },
         } }),
     });
