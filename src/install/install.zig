@@ -84,10 +84,9 @@ fn real_install_package(allocator: std.mem.Allocator, pkgs: [][]const u8, option
         dependency_tree.deinit();
     }
 
-    // 依存関係ツリーを表示
+    // Display dependency tree
     try dependencies.printDependencyTree(allocator, pkgs, &dependency_tree);
 
-    // トポロジカルソートでインストール順序を取得（依存関係から先）
     var install_order = try dependencies.getInstallOrder(allocator, pkgs, &dependency_tree);
     defer {
         for (install_order.items) |item| {
@@ -98,14 +97,14 @@ fn real_install_package(allocator: std.mem.Allocator, pkgs: [][]const u8, option
 
     const total_packages = install_order.items.len;
 
-    // fetch packages (インストール順序に従って)
+    // fetch packages
     for (install_order.items) |package_name| {
         const repo = install_packages.get(package_name) orelse continue;
 
         try info(allocator, "fetch: {s}", .{package_name});
 
         // ------ URL -------
-        // hcl(binary) package
+        // clos(binary) package
         const clos_url = try std.fmt.allocPrint(allocator, "{s}/packages/{s}.clos", .{ repo.url, package_name });
         defer allocator.free(clos_url);
 
@@ -146,7 +145,7 @@ fn real_install_package(allocator: std.mem.Allocator, pkgs: [][]const u8, option
     }
     std.debug.print("\n", .{});
 
-    // check integrity (インストール順序に従って)
+    // check integrity
     for (install_order.items, 0..) |package_name, i| {
         const current = i + 1;
         integrity_check(allocator, package_name, current, total_packages, prefix) catch |err| {
@@ -156,7 +155,7 @@ fn real_install_package(allocator: std.mem.Allocator, pkgs: [][]const u8, option
     }
     std.debug.print("\n", .{});
 
-    // === install packages (依存関係から先にインストール) ===
+    // === install packages ===
     for (install_order.items, 0..) |package_name, i| {
         const current = i + 1;
         const repo = install_packages.get(package_name) orelse continue;
