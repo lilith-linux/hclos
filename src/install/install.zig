@@ -87,17 +87,20 @@ fn real_install_package(allocator: std.mem.Allocator, pkgs: [][]const u8, option
     // 依存関係ツリーを表示
     try dependencies.printDependencyTree(allocator, pkgs, &dependency_tree);
 
-    var iterator = install_packages.iterator();
-    var iterator_for_integrity = install_packages.keyIterator();
+    // トポロジカルソートでインストール順序を取得（依存関係から先）
+    var install_order = try dependencies.getInstallOrder(allocator, pkgs, &dependency_tree);
+    defer {
+        for (install_order.items) |item| {
+            allocator.free(item);
+        }
+        install_order.deinit(allocator);
+    }
 
-    var total_packages: usize = 0;
+    const total_packages = install_order.items.len;
 
-    // fetch packages
-    while (iterator.next()) |iter| {
-        total_packages += 1;
-        const key = iter.key_ptr.*;
-        const package_name = std.mem.sliceTo(key, 0);
-        const repo = iter.value_ptr.*;
+    // fetch packages (インストール順序に従って)
+    for (install_order.items) |package_name| {
+        const repo = install_packages.get(package_name) orelse continue;
 
         try info(allocator, "fetch: {s}", .{package_name});
 
@@ -143,53 +146,41 @@ fn real_install_package(allocator: std.mem.Allocator, pkgs: [][]const u8, option
     }
     std.debug.print("\n", .{});
 
-    var current: usize = 0;
-    // check integrity
-    while (iterator_for_integrity.next()) |iter| {
-        current += 1;
-        const key = iter.*;
-        const pkg_name = std.mem.sliceTo(key, 0);
-        integrity_check(allocator, pkg_name, current, total_packages, prefix) catch |err| {
+    // check integrity (インストール順序に従って)
+    for (install_order.items, 0..) |package_name, i| {
+        const current = i + 1;
+        integrity_check(allocator, package_name, current, total_packages, prefix) catch |err| {
             std.debug.print("\r\x1b[2KError: {s}\n", .{@errorName(err)});
             std.process.exit(1);
         };
     }
     std.debug.print("\n", .{});
 
-    // === install packages ===
-    current = 0;
-    var iterator_for_unpack = install_packages.iterator();
+    // === install packages (依存関係から先にインストール) ===
+    for (install_order.items, 0..) |package_name, i| {
+        const current = i + 1;
+        const repo = install_packages.get(package_name) orelse continue;
 
-    while (iterator_for_unpack.next()) |iter| {
-        current += 1;
-        const key = iter.key_ptr.*;
-        const pkg_name = std.mem.sliceTo(key, 0);
-        const repo = iter.value_ptr.*;
+        try info(allocator, "install: {s} ({d}/{d})", .{ package_name, current, total_packages });
 
-        try info(allocator, "install: {s} ({d}/{d})", .{ pkg_name, current, total_packages });
+        const pkg_info = try getPackageInfo(allocator, package_name, repo, prefix);
 
-        const pkg_info = try getPackageInfo(allocator, pkg_name, repo, prefix);
-
-        const clos_file_path = try std.fmt.allocPrint(allocator, "{s}/{s}.clos", .{ prefix_cache, pkg_name });
+        const clos_file_path = try std.fmt.allocPrint(allocator, "{s}/{s}.clos", .{ prefix_cache, package_name });
         defer allocator.free(clos_file_path);
 
-        const hb_file_path = try std.fmt.allocPrint(allocator, "{s}/{s}.hb", .{ prefix_cache, pkg_name });
+        const hb_file_path = try std.fmt.allocPrint(allocator, "{s}/{s}.hb", .{ prefix_cache, package_name });
         defer allocator.free(hb_file_path);
 
         // unpack with prefix
         try unpack.unpack(allocator, clos_file_path, pkg_info, prefix);
-        // unpack.unpack(allocator, clos_file_path, pkg_info, prefix) catch |err| {
-        //     std.debug.print("\r\x1b[2KError unpacking {s}: {s}\n", .{ pkg_name, @errorName(err) });
-        //     std.process.exit(1);
-        // };
 
         if (!options.disable_scripts) {
             scripts.install.post_install(allocator, hb_file_path, prefix, is_prefix) catch |err| {
                 if (err == error.ProcessFailed) {
-                    std.debug.print("Error in executing post install script: {s}\n Error: {s}\n", .{ pkg_name, @errorName(err) });
+                    std.debug.print("Error in executing post install script: {s}\n Error: {s}\n", .{ package_name, @errorName(err) });
                     std.process.exit(1);
                 }
-                std.debug.print("Error in executing post install script: {s}, Error: {s}\n", .{ pkg_name, @errorName(err) });
+                std.debug.print("Error in executing post install script: {s}, Error: {s}\n", .{ package_name, @errorName(err) });
                 std.process.exit(1);
             };
         }

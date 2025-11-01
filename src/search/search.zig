@@ -12,21 +12,29 @@ pub fn search(allocator: std.mem.Allocator, pkgs: [][]const u8) !void {
     };
     defer parsed_repos.deinit();
 
+    var found = false;
     for (pkgs) |pkg| {
         for (parsed_repos.value.repo) |repo| {
             const read_repo = try std.fmt.allocPrint(allocator, "{s}/{s}/index", .{ constants.hclos_repos, repo.name });
             defer allocator.free(read_repo);
             const readed = try reader.read_packages(allocator, read_repo);
+            defer allocator.destroy(readed);
             var db = try structs.PackageDB.init(allocator, &readed.*);
             defer db.deinit();
 
-            if (db.find(pkg)) |found_pkg| {
+            var search_result = try db.search(allocator, pkg);
+            defer search_result.deinit(allocator);
+
+            for (search_result.items) |result| {
+                const found_pkg = result.package;
                 std.debug.print("{s} - v{s}: {s}\n", .{ found_pkg.name, found_pkg.version, found_pkg.description });
+                found = true;
                 break;
-            } else {
-                std.debug.print("Package not found: {s}\n", .{pkg});
-                std.process.exit(1);
             }
         }
+    }
+
+    if (!found) {
+        std.debug.print("No packages found\n", .{});
     }
 }
