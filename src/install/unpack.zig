@@ -49,7 +49,6 @@ pub fn unpack(
         }
     }
 
-    // パスリストをprefix付きに変換
     const installed_package = installed.structs.InstalledPackage{
         .name = name,
         .version = version,
@@ -65,7 +64,7 @@ fn unpackTarZstd(
     package_file: []const u8,
     prefix: []const u8,
 ) ![][]const u8 {
-    // パッケージファイルを開く
+    // Open package file
     const file = try std.fs.openFileAbsolute(package_file, .{ .mode = .read_only });
     defer file.close();
 
@@ -76,7 +75,7 @@ fn unpackTarZstd(
     var zstd_stream = zstd.Decompress.init(&reader.interface, &window_buf, .{});
     const uncompressed_reader = &zstd_stream.reader;
 
-    // tarアーカイブを処理
+    // initialize pathlist
     var pathlist = std.ArrayList([]const u8){};
     errdefer {
         for (pathlist.items) |path| {
@@ -85,7 +84,7 @@ fn unpackTarZstd(
         pathlist.deinit(allocator);
     }
 
-    // prefixディレクトリを開く
+    // open prefix directory
     var prefix_dir = try std.fs.openDirAbsolute(prefix, .{});
     defer prefix_dir.close();
 
@@ -94,16 +93,15 @@ fn unpackTarZstd(
 
     var tar_iter = std.tar.Iterator.init(uncompressed_reader, .{ .file_name_buffer = &file_name_buf, .link_name_buffer = &link_name_buf });
 
+    // process tar file
     while (try tar_iter.next()) |tar_file| {
         switch (tar_file.kind) {
             .directory => {
-                // ディレクトリを作成
                 try prefix_dir.makePath(tar_file.name);
                 const path = try allocator.dupe(u8, tar_file.name);
                 try pathlist.append(allocator, path);
             },
             .file => {
-                // 親ディレクトリが存在することを確認
                 if (std.fs.path.dirname(tar_file.name)) |dir_name| {
                     try prefix_dir.makePath(dir_name);
                 }
