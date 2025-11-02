@@ -28,17 +28,13 @@ pub fn makeDirAbsoluteRecursive(allocator: std.mem.Allocator, dir_path: []const 
 }
 
 pub fn isValidPackage(pkg: *const package.structs.Package) bool {
-    // 名前の最初の文字をチェック
     if (pkg.name[0] == 0) return false;
 
-    // 印刷可能なASCII文字で始まるかチェック
     if (pkg.name[0] < 32 or pkg.name[0] > 126) return false;
 
-    // 名前の長さを確認（ゼロバイトまで）
     const name_end = std.mem.indexOfScalar(u8, &pkg.name, 0) orelse pkg.name.len;
     if (name_end == 0 or name_end > 32) return false;
 
-    // 名前が有効なASCII文字のみで構成されているか
     for (pkg.name[0..name_end]) |c| {
         if (c < 32 or c > 126) return false;
     }
