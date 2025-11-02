@@ -6,9 +6,7 @@ const search = @import("search");
 const list = @import("list");
 const help_message = @embedFile("./templates/help_message");
 
-// amary is 'alpha'
-// flower is 'beta'
-// If it is a stable version (a version ready for normal use), no special name will be written.
+// amary → alpha | flower → beta | wood → stable
 const VERSION = "0.1.0 (amary)";
 const ZIG_VERSION = builtin.zig_version_string;
 
