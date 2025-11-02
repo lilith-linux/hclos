@@ -27,7 +27,7 @@ pub fn search(allocator: std.mem.Allocator, pkgs: [][]const u8) !void {
 
             for (search_result.items) |result| {
                 const found_pkg = result.package;
-                std.debug.print("{s} - v{s}: {s}\n", .{ found_pkg.name, found_pkg.version, found_pkg.description });
+                std.debug.print("{s} ({s}) - v{s}: {s}\n", .{ found_pkg.name, repo.name, found_pkg.version, found_pkg.description });
                 found = true;
                 break;
             }

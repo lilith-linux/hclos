@@ -6,6 +6,12 @@ const search = @import("search");
 const list = @import("list");
 const help_message = @embedFile("./templates/help_message");
 
+// amary is 'alpha'
+// flower is 'beta'
+// If it is a stable version (a version ready for normal use), no special name will be written.
+const VERSION = "0.1.0 (amary)";
+const ZIG_VERSION = builtin.zig_version_string;
+
 const Command = enum {
     install,
     update,
@@ -119,7 +125,6 @@ fn parseCommand(args: [][:0]u8) !?ParsedCommand {
 
     var arg_idx: usize = 1;
 
-    // コマンド別にオプションをパース
     switch (command) {
         .install => {
             result.options = .{ .install = try parseInstallOptions(args[arg_idx..], &arg_idx) };
@@ -136,7 +141,6 @@ fn parseCommand(args: [][:0]u8) !?ParsedCommand {
         else => {},
     }
 
-    // 残りの引数を位置引数として収集
     const tmp_allocator = std.heap.page_allocator;
     var positional_list = std.ArrayList([]const u8){};
     defer positional_list.deinit(tmp_allocator);
@@ -299,7 +303,8 @@ fn executeCommand(allocator: std.mem.Allocator, parsed: ParsedCommand) !void {
             std.debug.print("clean command not yet implemented\n", .{});
         },
         .version => {
-            std.debug.print("version command not yet implemented\n", .{});
+            std.debug.print("hclos version {s}\n", .{VERSION});
+            std.debug.print("with zig {s}\n", .{ZIG_VERSION});
         },
     }
 }

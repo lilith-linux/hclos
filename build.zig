@@ -32,8 +32,14 @@ pub fn build(b: *std.Build) void {
     } });
     fetch.addImport("curl", dep_curl.module("curl"));
 
+    const package = b.addModule("package", .{
+        .root_source_file = b.path("src/package/remote/mod.zig"),
+        .target = target,
+    });
+
     const utils = b.addModule("utils", .{ .root_source_file = b.path("src/utils.zig"), .target = target, .imports = &.{
         .{ .name = "fetch", .module = fetch },
+        .{ .name = "package", .module = package },
     } });
 
     const hash = b.addModule("hash", .{
@@ -54,11 +60,6 @@ pub fn build(b: *std.Build) void {
 
     const installed = b.addModule("installed", .{
         .root_source_file = b.path("src/package/installed/mod.zig"),
-        .target = target,
-    });
-
-    const package = b.addModule("package", .{
-        .root_source_file = b.path("src/package/remote/mod.zig"),
         .target = target,
     });
 
@@ -101,6 +102,7 @@ pub fn build(b: *std.Build) void {
         .{ .name = "constants", .module = constants },
         .{ .name = "repos_conf", .module = repos_conf },
         .{ .name = "package", .module = package },
+        .{ .name = "utils", .module = utils },
     } });
 
     const exe = b.addExecutable(.{
