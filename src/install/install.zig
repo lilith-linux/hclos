@@ -14,6 +14,7 @@ const hash = @import("hash");
 pub const InstallOptions = struct {
     prefix: []const u8 = "/",
     disable_scripts: bool = false,
+    hb_file: ?[]const u8 = null,
 };
 
 pub fn install(allocator: std.mem.Allocator, pkgs: [][]const u8, options: InstallOptions) !void {
@@ -170,15 +171,20 @@ fn real_install_package(allocator: std.mem.Allocator, pkgs: [][]const u8, option
         const hb_file_path = try std.fmt.allocPrint(allocator, "{s}/{s}.hb", .{ prefix_cache, package_name });
         defer allocator.free(hb_file_path);
 
+        // preinstall script
+        if (!options.disable_scripts) {
+            scripts.install.pre_install(allocator, hb_file_path, prefix, is_prefix) catch |err| {
+                std.debug.print("Error in executing pre install script: {s}, Error: {s}\n", .{ package_name, @errorName(err) });
+                std.process.exit(1);
+            };
+        }
+
         // unpack with prefix
         try unpack.unpack(allocator, clos_file_path, pkg_info, prefix);
 
+        // postinstall script
         if (!options.disable_scripts) {
             scripts.install.post_install(allocator, hb_file_path, prefix, is_prefix) catch |err| {
-                if (err == error.ProcessFailed) {
-                    std.debug.print("Error in executing post install script: {s}\n Error: {s}\n", .{ package_name, @errorName(err) });
-                    std.process.exit(1);
-                }
                 std.debug.print("Error in executing post install script: {s}, Error: {s}\n", .{ package_name, @errorName(err) });
                 std.process.exit(1);
             };
@@ -187,6 +193,17 @@ fn real_install_package(allocator: std.mem.Allocator, pkgs: [][]const u8, option
     std.debug.print("\n", .{});
 
     std.debug.print("Installation completed successfully to: {s}\n", .{prefix});
+}
+
+// todo
+fn install_from_file(allocator: std.mem.Allocator, hb_file: []const u8, clos_file: []const u8, prefix: []const u8, disable_scripts: bool) !void {
+    const is_prefix = prefix.len == 1;
+
+    if (!disable_scripts) {
+        try scripts.install.pre_install(allocator, hb_file, prefix, is_prefix);
+    }
+
+    try unpack.unpack(allocator, hb_file, , prefix: []const u8)
 }
 
 fn getPackageInfo(

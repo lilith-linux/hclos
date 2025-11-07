@@ -1,6 +1,6 @@
 const std = @import("std");
 const linux = std.os.linux;
-const chroot = @import("chroot_setup.zig");
+const chroot = @import("chroot.zig");
 const utils = @import("utils");
 
 pub fn pre_install(allocator: std.mem.Allocator, file_path: []const u8, prefix: []const u8, is_prefix: bool) !void {
@@ -16,12 +16,14 @@ pub fn pre_install(allocator: std.mem.Allocator, file_path: []const u8, prefix: 
         const pid = try std.posix.fork();
 
         const target = try std.fmt.allocPrint(allocator, "{s}/script", .{prefix});
+        defer allocator.free(target);
+
         try utils.copyFile(allocator, file_path, target);
         defer utils.deleteFile(target);
 
         if (pid == 0) {
             try env.enterChroot();
-            try real_preinst(allocator, "/script");
+            try real_postinst(allocator, "/script");
             std.posix.exit(0);
         } else {
             const result = std.posix.waitpid(pid, 0);
@@ -30,7 +32,7 @@ pub fn pre_install(allocator: std.mem.Allocator, file_path: []const u8, prefix: 
                 return error.ChildProcessCrashed;
             }
             if (std.posix.W.EXITSTATUS(result.status) != 0) {
-                return error.InstallationFailed;
+                return error.ProcessFailed;
             }
             return;
         }
@@ -78,7 +80,7 @@ pub fn post_install(allocator: std.mem.Allocator, file_path: []const u8, prefix:
 }
 
 fn real_preinst(allocator: std.mem.Allocator, shfile: []const u8) !void {
-    const cmd = try std.fmt.allocPrint(allocator, ". {s} && pre_inst", .{shfile});
+    const cmd = try std.fmt.allocPrint(allocator, ". {s} && post_inst", .{shfile});
     defer allocator.free(cmd);
 
     var child = std.process.Child.init(&.{ "/usr/bin/sh", "-c", cmd }, allocator);
@@ -89,8 +91,9 @@ fn real_preinst(allocator: std.mem.Allocator, shfile: []const u8) !void {
 
     try child.spawn();
     const status = try child.wait();
-    if (status.Exited != 0) {
-        return error.InstallationFailed;
+
+    if (status.Exited != 0 or status != .Exited) {
+        return error.PreInstallFailed;
     }
 }
 
@@ -107,10 +110,7 @@ fn real_postinst(allocator: std.mem.Allocator, shfile: []const u8) !void {
     try child.spawn();
     const status = try child.wait();
 
-    if (status != .Exited) {
-        return error.ProcessNotExited;
-    }
-    if (status.Exited != 0) {
-        return error.InstallationFailed;
+    if (status.Exited != 0 or status != .Exited) {
+        return error.PostInstallFailed;
     }
 }

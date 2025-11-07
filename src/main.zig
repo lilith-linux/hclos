@@ -52,6 +52,7 @@ const CommandOptions = union(enum) {
     const InstallOptions = struct {
         prefix: []const u8 = "/",
         disable_scripts: bool = false,
+        hb_file: ?[]const u8 = null,
     };
 
     const UpdateOptions = struct {
@@ -169,6 +170,13 @@ fn parseInstallOptions(args: [][:0]u8, arg_idx: *usize) !CommandOptions.InstallO
         } else if (std.mem.eql(u8, arg, "--disable-scripts")) {
             opts.disable_scripts = true;
             i += 1;
+        } else if (std.mem.eql(u8, arg, "--hb-file")) {
+            if (i + 1 >= args.len) {
+                std.debug.print("--hb-file requires an argument\n", .{});
+                return error.InvalidArgument;
+            }
+            opts.hb_file = args[i + 1];
+            i += 2;
         } else if (std.mem.eql(u8, arg, "--help")) {
             std.debug.print("--prefix <PREFIX>\tset installation directory\n", .{});
             std.debug.print("--disable-scripts\tdiasble postinstall and preinstall scripts\n", .{});
